@@ -9,10 +9,9 @@
     "dev": "node --watch server.js"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=20.0.0"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "openclaw": "latest"
+    "express": "^4.19.2"
   }
 }
