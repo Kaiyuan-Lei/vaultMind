@@ -70,29 +70,49 @@ function fmtTg(page, summary) {
 //  數據抓取 — 替代 OpenClaw flows
 // ════════════════════════════════════════════════════════════════
 
-// ── Flow 1: 幣價 + 持倉數據（每 5 分鐘）─────────────────────────────────────
+// 常見資產的 CoinGecko ID 映射（用戶輸入 ticker → CoinGecko ID）
+const COIN_ID_MAP = {
+  BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin',
+  SOL: 'solana', ARB: 'arbitrum', OP: 'optimism',
+  MATIC: 'matic-network', AVAX: 'avalanche-2', DOT: 'polkadot',
+  LINK: 'chainlink', UNI: 'uniswap', AAVE: 'aave',
+  CRV: 'curve-dao-token', MKR: 'maker', SNX: 'havven',
+  LDO: 'lido-dao', RPL: 'rocket-pool', PENDLE: 'pendle',
+  USDC: 'usd-coin', USDT: 'tether', DAI: 'dai',
+  WBTC: 'wrapped-bitcoin', WETH: 'weth',
+  SUI: 'sui', APT: 'aptos', SEI: 'sei-network',
+  INJ: 'injective-protocol', TIA: 'celestia',
+  JTO: 'jito-governance-token', PYTH: 'pyth-network',
+};
+
+// ── Flow 1: 幣價（每 5 分鐘）────────────────────────────────────────────────
 async function fetchPortfolioData() {
   try {
-    const ids = 'ethereum,bitcoin,arbitrum,usd-coin';
+    // 抓取所有已知資產的價格
+    const ids = Object.values(COIN_ID_MAP).join(',');
     const url = COINGECKO_KEY
-      ? `https://pro-api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&x_cg_pro_api_key=${COINGECKO_KEY}`
+      ? `https://pro-api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&x_cg_pro_api_key=${COINGECKO_KEY}`
       : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
 
-    const prices = await fetchJson(url);
+    const raw = await fetchJson(url);
 
-    const data = {
-      timestamp: new Date().toISOString(),
-      prices: {
-        ETH:  { usd: prices.ethereum?.usd,  change24h: prices.ethereum?.usd_24h_change },
-        BTC:  { usd: prices.bitcoin?.usd,   change24h: prices.bitcoin?.usd_24h_change },
-        ARB:  { usd: prices.arbitrum?.usd,  change24h: prices.arbitrum?.usd_24h_change },
-        USDC: { usd: prices['usd-coin']?.usd, change24h: 0 },
-      },
-      // 實際持倉由前端用戶輸入，這裡只提供即時幣價供參考
-      source: 'coingecko',
-    };
+    // 轉換為 ticker → 價格數據的格式
+    const prices = {};
+    for (const [ticker, cgId] of Object.entries(COIN_ID_MAP)) {
+      if (raw[cgId]) {
+        prices[ticker] = {
+          usd:       raw[cgId].usd,
+          change24h: raw[cgId].usd_24h_change != null
+            ? +raw[cgId].usd_24h_change.toFixed(2)
+            : 0,
+          marketCap: raw[cgId].usd_market_cap || null,
+        };
+      }
+    }
 
+    const data = { timestamp: new Date().toISOString(), prices, source: 'coingecko' };
     await saveData('portfolio', data);
+    console.log(`[flow:portfolio] ${Object.keys(prices).length} assets updated`);
   } catch (e) {
     console.error('[flow:portfolio]', e.message);
   }
@@ -321,6 +341,24 @@ app.get('/api/signals',   async (_, res) => {
 app.get('/api/sentiment', async (_, res) => {
   const d = await readData('sentiment.json');
   d ? res.json(d) : res.status(404).json({ error: '數據抓取中' });
+});
+
+// GET /api/prices?symbols=ETH,BTC,SOL — 前端抓取指定資產的實時幣價
+app.get('/api/prices', async (req, res) => {
+  const portfolio = await readData('portfolio.json');
+  if (!portfolio?.prices) {
+    return res.status(404).json({ error: '幣價數據尚未就緒，請稍後（約 2 分鐘）' });
+  }
+  const symbols = req.query.symbols
+    ? req.query.symbols.toUpperCase().split(',').map(s => s.trim())
+    : Object.keys(portfolio.prices);
+
+  const result = {};
+  for (const sym of symbols) {
+    if (portfolio.prices[sym]) result[sym] = portfolio.prices[sym];
+    else result[sym] = null; // 未知資產
+  }
+  res.json({ prices: result, timestamp: portfolio.timestamp });
 });
 
 // ── Claude API 代理 + Telegram 推送 ──────────────────────────────────────────
