@@ -371,6 +371,39 @@ details.card>div{border-top:1px solid var(--border)}
   </div>
 
   <!-- 進階數據（可摺疊） -->
+
+  <!-- 持倉明細 -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      持倉明細
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:10px;color:var(--hint)">填入名稱和數量，系統自動抓取實時幣價</span>
+        <button class="btn" id="btn-fetch-prices" style="font-size:10px;padding:3px 10px">⟳ 抓取價格</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="asset-table">
+        <thead>
+          <tr>
+            <th>資產代碼 <span style="font-weight:400;color:var(--hint)">(e.g. ETH)</span></th>
+            <th>類別</th>
+            <th>持倉量</th>
+            <th>成本均價 <span style="font-weight:400;color:var(--hint)">(選填)</span></th>
+            <th>現價 <span style="font-weight:400;color:var(--hint)">(自動)</span></th>
+            <th>市值 <span style="font-weight:400;color:var(--hint)">(自動)</span></th>
+            <th>佔比 % <span style="font-weight:400;color:var(--hint)">(自動)</span></th>
+            <th>未實現 PnL <span style="font-weight:400;color:var(--hint)">(自動)</span></th>
+            <th>24h % <span style="font-weight:400;color:var(--hint)">(自動)</span></th>
+            <th>風險評級</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="asset-tbody"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" id="add-asset-btn">＋ 新增資產</button>
+  </div>
+
   <details class="card" id="advanced-section" style="padding:0">
     <summary style="padding:14px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text)">
       <span>進階數據 <span style="font-weight:400;color:var(--hint);font-size:10px">績效指標 · 市場背景 · DeFi 策略（可選，填入後 AI 分析更精準）</span></span>
@@ -451,34 +484,6 @@ details.card>div{border-top:1px solid var(--border)}
       </div>
     </div>
   </details>
-
-  <!-- 持倉明細 -->
-  <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-      持倉明細
-      <span style="font-size:10px;color:var(--hint)">點擊格子直接編輯 · 金額單位與上方基礎貨幣一致</span>
-    </div>
-    <div style="overflow-x:auto">
-      <table class="asset-table">
-        <thead>
-          <tr>
-            <th>資產名稱</th>
-            <th>類別</th>
-            <th>持倉量</th>
-            <th>現價</th>
-            <th>市值</th>
-            <th>佔比 %</th>
-            <th>未實現 PnL</th>
-            <th>24h 變化 %</th>
-            <th>風險評級</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="asset-tbody"></tbody>
-      </table>
-    </div>
-    <button class="add-row-btn" id="add-asset-btn">＋ 新增資產</button>
-  </div>
 
 
 </div>
@@ -776,28 +781,42 @@ const scaleBase={grid:{color:C.grid},border:{color:C.grid},ticks:{color:C.muted,
 //  Asset row management
 // ────────────────────────────────────────────────────────────
 const ASSET_COLORS=['#4da6ff','#f4a623','#9b7eff','#00d4a0','#ff4d4f','#fdb94b','#00b88a','#ff9f43','#ee5a24','#0652dd'];
+// 自動識別資產類別
+function guessCategory(ticker){
+  const t=ticker.toUpperCase();
+  if(['USDC','USDT','DAI','FRAX','BUSD','TUSD'].includes(t)) return 'Stablecoin';
+  if(['ETH','BTC','SOL','AVAX','DOT','ATOM','ADA'].includes(t)) return 'L1';
+  if(['ARB','OP','MATIC','IMX','MANTA','BLAST','SCROLL'].includes(t)) return 'L2';
+  if(['AAVE','UNI','CRV','MKR','SNX','COMP','BAL','LDO','RPL','PENDLE'].includes(t)) return 'DeFi';
+  if(t.includes('BOND')||t.includes('RWA')||t.includes('HKD')) return 'RWA';
+  return 'Other';
+}
+
 function addAssetRow(data={}){
   const id=assetRowId++;
   const color=ASSET_COLORS[id%ASSET_COLORS.length];
   const tr=document.createElement('tr');
   tr.dataset.rid=id;
+  const autoStyle='background:var(--s2);color:var(--muted);font-size:11px;text-align:right;padding:4px 6px;border-radius:4px;min-width:70px;display:block';
   tr.innerHTML=`
-    <td><input type="text" placeholder="e.g. ETH" value="${data.name||''}" data-field="name" style="width:80px"/></td>
+    <td><input type="text" placeholder="ETH" value="${data.name||''}" data-field="name" style="width:72px;text-transform:uppercase"
+      oninput="this.value=this.value.toUpperCase();autoFillCategory(this)"/></td>
     <td><select data-field="category">
-      <option value="L1"${data.category==='L1'?' selected':''}>L1</option>
-      <option value="L2"${data.category==='L2'?' selected':''}>L2</option>
-      <option value="DeFi"${data.category==='DeFi'?' selected':''}>DeFi</option>
-      <option value="RWA"${data.category==='RWA'?' selected':''}>RWA</option>
-      <option value="Stablecoin"${data.category==='Stablecoin'?' selected':''}>Stable</option>
-      <option value="CEX"${data.category==='CEX'?' selected':''}>CEX</option>
-      <option value="Other"${data.category==='Other'?' selected':''}>Other</option>
+      <option value="L1"${(data.category||guessCategory(data.name||''))==='L1'?' selected':''}>L1</option>
+      <option value="L2"${(data.category)==='L2'?' selected':''}>L2</option>
+      <option value="DeFi"${(data.category)==='DeFi'?' selected':''}>DeFi</option>
+      <option value="RWA"${(data.category)==='RWA'?' selected':''}>RWA</option>
+      <option value="Stablecoin"${(data.category)==='Stablecoin'?' selected':''}>Stable</option>
+      <option value="CEX"${(data.category)==='CEX'?' selected':''}>CEX</option>
+      <option value="Other"${(!data.category||data.category==='Other')?' selected':''}>Other</option>
     </select></td>
-    <td><input type="number" placeholder="0" value="${data.qty||''}" data-field="qty" style="width:90px"/></td>
-    <td><input type="number" placeholder="0" value="${data.price||''}" data-field="price" style="width:90px"/></td>
-    <td><input type="number" placeholder="auto" value="${data.value||''}" data-field="value" style="width:90px" title="留空自動計算 qty×price"/></td>
-    <td><input type="number" placeholder="auto" value="${data.pct||''}" data-field="pct" style="width:54px" title="留空自動計算"/></td>
-    <td><input type="number" placeholder="0" value="${data.pnl||''}" data-field="pnl" style="width:80px"/></td>
-    <td><input type="number" placeholder="0" value="${data.change24h||''}" data-field="change24h" style="width:60px"/></td>
+    <td><input type="number" placeholder="0" value="${data.qty||''}" data-field="qty" style="width:80px"/></td>
+    <td><input type="number" placeholder="成本價" value="${data.costPrice||''}" data-field="costPrice" style="width:80px"/></td>
+    <td><span class="auto-cell" data-field="price" style="${autoStyle}">${data.price?data.price.toLocaleString():'—'}</span></td>
+    <td><span class="auto-cell" data-field="value" style="${autoStyle}">${data.value?'$'+fmtNum(data.value):'—'}</span></td>
+    <td><span class="auto-cell" data-field="pct"   style="${autoStyle}">${data.pct?data.pct+'%':'—'}</span></td>
+    <td><span class="auto-cell" data-field="pnl"   style="${autoStyle};color:${data.pnl>0?'var(--accent)':data.pnl<0?'var(--danger)':'var(--muted)'}">${data.pnl!=null?(data.pnl>0?'+':'')+fmtNum(data.pnl):'—'}</span></td>
+    <td><span class="auto-cell" data-field="change24h" style="${autoStyle};color:${data.change24h>0?'var(--accent)':data.change24h<0?'var(--danger)':'var(--muted)'}">${data.change24h!=null?(data.change24h>0?'+':'')+data.change24h+'%':'—'}</span></td>
     <td><select data-field="risk">
       <option value="very_low"${data.risk==='very_low'?' selected':''}>極低</option>
       <option value="low"${data.risk==='low'?' selected':''}>低</option>
@@ -807,6 +826,95 @@ function addAssetRow(data={}){
     <td><button class="del-btn" data-del-rid="${id}">✕</button></td>`;
   tr.style.setProperty('--row-color', color);
   document.getElementById('asset-tbody').appendChild(tr);
+}
+
+function autoFillCategory(input){
+  const tr=input.closest('tr');
+  if(!tr) return;
+  const cat=tr.querySelector('[data-field="category"]');
+  if(cat&&input.value.length>=2) cat.value=guessCategory(input.value);
+}
+
+// ── 自動抓取幣價 ──
+async function fetchPricesForAssets(){
+  const base=getRailwayUrl();
+  if(!base){showToast('請先填入 Railway URL 才能自動抓取幣價',true);return;}
+
+  const rows=document.querySelectorAll('#asset-tbody tr');
+  const symbols=[...rows].map(tr=>tr.querySelector('[data-field="name"]')?.value.trim().toUpperCase()).filter(Boolean);
+  if(!symbols.length){showToast('請先填入資產代碼',true);return;}
+
+  const btn=document.getElementById('btn-fetch-prices');
+  if(btn){btn.textContent='抓取中…';btn.disabled=true;}
+
+  try{
+    const res=await fetch(`${base}/api/prices?symbols=${symbols.join(',')}`,{signal:AbortSignal.timeout(8000)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    const prices=data.prices||{};
+
+    // 計算總市值（用於佔比）
+    let totalVal=0;
+    const rowData=[];
+    rows.forEach(tr=>{
+      const sym=tr.querySelector('[data-field="name"]')?.value.trim().toUpperCase();
+      const qty=parseFloat(tr.querySelector('[data-field="qty"]')?.value)||0;
+      const p=prices[sym];
+      const price=p?.usd||0;
+      const value=qty*price;
+      totalVal+=value;
+      rowData.push({tr,sym,qty,price,value,change24h:p?.change24h??null});
+    });
+
+    // 填入自動欄位
+    rowData.forEach(({tr,sym,qty,price,value,change24h})=>{
+      const costEl=tr.querySelector('[data-field="costPrice"]');
+      const costPrice=parseFloat(costEl?.value)||0;
+      const pnl=costPrice&&qty?(price-costPrice)*qty:null;
+      const pct=totalVal?+(value/totalVal*100).toFixed(1):0;
+
+      const set=(field,val)=>{
+        const el=tr.querySelector(`[data-field="${field}"]`);
+        if(!el) return;
+        el.textContent=val;
+        el.dataset.val=String(parseFloat(val)||0); // store numeric for readPortfolio
+      };
+
+      if(price) set('price', price.toLocaleString());
+      if(value) set('value', '$'+fmtNum(value));
+      if(pct)   set('pct', pct+'%');
+      if(pnl!=null){
+        const el=tr.querySelector('[data-field="pnl"]');
+        if(el){
+          el.textContent=(pnl>0?'+':'')+fmtNum(pnl);
+          el.style.color=pnl>0?'var(--accent)':pnl<0?'var(--danger)':'var(--muted)';
+          el.dataset.val=String(pnl);
+        }
+      }
+      if(change24h!=null){
+        const el=tr.querySelector('[data-field="change24h"]');
+        if(el){
+          el.textContent=(change24h>0?'+':'')+change24h+'%';
+          el.style.color=change24h>0?'var(--accent)':change24h<0?'var(--danger)':'var(--muted)';
+          el.dataset.val=String(change24h);
+        }
+      }
+
+      // 未知資產標記
+      if(!prices[sym]){
+        const el=tr.querySelector('[data-field="price"]');
+        if(el){el.textContent='未知資產';el.style.color='var(--amber)';}
+      }
+    });
+
+    const found=rowData.filter(r=>prices[r.sym]).length;
+    showToast(`✓ 已更新 ${found}/${symbols.length} 個資產的實時幣價`);
+    setApiStatus(true,'即時');
+  }catch(e){
+    showToast('抓取失敗：'+e.message,true);
+  }finally{
+    if(btn){btn.textContent='⟳ 抓取價格';btn.disabled=false;}
+  }
 }
 function addStratRow(data={}){
   const id=stratRowId++;
@@ -865,12 +973,21 @@ function readPortfolio(){
     const f=field=>tr.querySelector(`[data-field="${field}"]`)?.value;
     const name=f('name')?.trim(); if(!name) return;
     const qty=parseFloat(f('qty'))||0;
-    const price=parseFloat(f('price'))||0;
-    let value=parseFloat(f('value'))||0;
-    if(!value && qty && price) value=qty*price;
-    let pct=parseFloat(f('pct'))||0;
-    assets.push({name,category:f('category')||'Other',qty,price,value,pct,
-      pnl:parseFloat(f('pnl'))||0,change24h:parseFloat(f('change24h'))||0,risk:f('risk')||'medium'});
+    const costPrice=parseFloat(f('costPrice'))||0;
+    // auto-cells store numeric in data-val attribute
+    const fnum=(field)=>{
+      const el=tr.querySelector(`[data-field="${field}"]`);
+      if(!el) return 0;
+      // input element
+      if(el.tagName==='INPUT') return parseFloat(el.value)||0;
+      // auto-cell span
+      return parseFloat(el.dataset.val)||0;
+    };
+    const price=fnum('price');
+    let value=fnum('value')||( qty&&price ? qty*price : 0 );
+    let pct=fnum('pct');
+    assets.push({name,category:f('category')||'Other',qty,price,costPrice,value,pct,
+      pnl:fnum('pnl'),change24h:fnum('change24h'),risk:f('risk')||'medium'});
   });
   // auto-calc pct if AUM is known
   const totalVal=assets.reduce((s,a)=>s+a.value,0);
@@ -1518,6 +1635,7 @@ document.addEventListener('click',e=>{
 });
 
 document.getElementById('add-asset-btn')?.addEventListener('click',()=>addAssetRow());
+document.getElementById('btn-fetch-prices')?.addEventListener('click',fetchPricesForAssets);
 document.getElementById('add-strat-btn')?.addEventListener('click',()=>addStratRow());
 
 // load sample data
@@ -1542,13 +1660,13 @@ document.getElementById('btn-load-sample')?.addEventListener('click',()=>{
 
   document.getElementById('asset-tbody').innerHTML='';
   assetRowId=0;
+  // 範例數據：只填名稱、數量、成本均價，其餘由「抓取價格」自動填入
   const sampleAssets=[
-    {name:'ETH',category:'L1',qty:420.5,price:2840,value:1193220,pct:28.3,pnl:84000,change24h:2.1,risk:'medium'},
-    {name:'RWA Bond',category:'RWA',qty:1100,price:1009,value:1109900,pct:26.4,pnl:9000,change24h:0.1,risk:'low'},
-    {name:'BTC',category:'L1',qty:12.8,price:68000,value:870400,pct:20.7,pnl:51000,change24h:1.4,risk:'medium'},
-    {name:'USDC LP',category:'DeFi',qty:540000,price:1,value:540000,pct:12.8,pnl:18000,change24h:0,risk:'low'},
-    {name:'Stable LP',category:'DeFi',qty:380000,price:1,value:380000,pct:9.0,pnl:4000,change24h:0,risk:'very_low'},
-    {name:'ARB',category:'L2',qty:185000,price:1.24,value:229400,pct:5.4,pnl:-12000,change24h:-3.2,risk:'high'},
+    {name:'ETH',      category:'L1',    qty:420.5,  costPrice:2600, risk:'medium'},
+    {name:'RWA Bond', category:'RWA',   qty:1100,   costPrice:1000, risk:'low'},
+    {name:'BTC',      category:'L1',    qty:12.8,   costPrice:65000,risk:'medium'},
+    {name:'USDC',     category:'Stablecoin', qty:540000, costPrice:1, risk:'low'},
+    {name:'ARB',      category:'L2',    qty:185000, costPrice:1.35, risk:'high'},
   ];
   sampleAssets.forEach(a=>addAssetRow(a));
 
