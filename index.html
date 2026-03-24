@@ -70,7 +70,7 @@ main{background:var(--bg);padding:22px;overflow-y:auto}
 .mc{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
 .mc .lbl{font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .mc .val{font-size:22px;font-weight:500;color:var(--text);line-height:1}
-.mc .val.g{color:var(--accent)}.mc .val.r{color:var(--danger)}.mc .val.a{color:var(--amber)}
+.mc .val.g{color:var(--accent)}.mc .val.r{color:var(--danger)}.mc .val.a{color:var(--amber)}.mc .val.hint{color:var(--hint);font-size:13px;animation:pulse 2s infinite}
 .mc .sub{font-size:11px;color:var(--hint);margin-top:4px}
 
 /* ── Buttons ── */
@@ -746,7 +746,16 @@ function initNav(){
   });
 }
 function onPageEnter(pg){
-  if(pg==='overview') renderOverview();
+  if(pg==='overview'){
+    renderOverview();
+    // 若績效指標為空，自動觸發 AI 診斷（延遲 600ms 等 DOM 渲染完成）
+    const p=portfolio;
+    const missingMetrics=p.sharpe==null&&p.mdd==null&&p.annual==null;
+    const hasAssets=p.assets.length>0||p.aum>0;
+    if(hasAssets&&missingMetrics){
+      setTimeout(()=>{ readPortfolio(); callAI('overview','overview-main'); }, 600);
+    }
+  }
   if(pg==='portfolio') renderPortfolio();
   if(pg==='risk') renderRisk();
   if(pg==='strategy') renderStrategy();
@@ -940,13 +949,42 @@ function buildContext(){
 //  Claude API — token-efficient system prompt + prompt map
 // ────────────────────────────────────────────────────────────
 // System prompt kept lean: role + output rules only (no examples)
-const SYSTEM_PROMPT=`Web3/DeFi資產管理分析師。精通：DeFi策略、鏈上分析、組合風控、香港SFC監管。
-規則：①繁體中文 ②具體數字+觸發條件 ③Markdown：**粗體**標題、- 列表、> 警示 ④300字內，複雜問題可至500字 ⑤數據不足時先分析已有數據再列出缺口`;
+const SYSTEM_PROMPT=`你是 Web3/DeFi 資產管理分析師。精通：DeFi策略、鏈上分析、組合風控、香港SFC監管。
+
+核心規則：
+① 繁體中文，具體數字＋觸發條件
+② Markdown：**粗體**標題、- 列表、> 警示框
+③ 300字內，複雜問題可至500字
+
+【重要】當用戶未填績效指標（Sharpe、Max DD、年化收益等）時：
+- 根據持倉資產類別、AUM、風險評級，主動估算合理的績效範圍
+- 格式：「**估算值**（基於持倉推算）」，清楚標示是估算
+- 同時根據用戶的投資目標給出達成目標所需的具體配置建議
+
+【重要】當用戶未填 DeFi 策略時：
+- 根據用戶的投資目標和持倉缺口，推薦 2-3 個適合的策略
+- 包含：策略名稱、類型、預期 APY 範圍、風險等級、最小資金門檻`;
 
 // Prompt map: short, precise instructions — context appended separately
 const PROMPT_MAP={
   // overview
-  'overview-main':'評估組合健康：風險調整收益、最大風險集中點、3條再平衡建議（含比例和預期改善）。',
+  'overview-main':`基於用戶的持倉數據和投資目標，完成以下分析：
+
+**第一部分：量化指標估算**（若用戶未填則主動估算）
+- 預估 Sharpe Ratio 範圍（格式：X.X–X.X，基於持倉波動性）
+- 預估 Max Drawdown（格式：-X%，基於加密資產佔比）
+- 預估年化收益目標（格式：+X%，對齊用戶投資目標）
+- Beta vs BTC（格式：0.X，基於資產相關性）
+
+**第二部分：組合診斷**
+- 當前配置能否達成投資目標（明確給出是/否/部分）
+- 最大風險集中點（具體說明哪個資產/類別）
+
+**第三部分：行動建議**
+- 3條具體操作（含資產名稱、調整比例、預期效果）
+
+**第四部分：推薦策略**（若用戶未填 DeFi 策略）
+- 根據投資目標推薦 1-2 個適合的 DeFi 策略（含 APY 預期和風險）`,
   'quick-rebalance':'立即可執行的再平衡：減持哪些、加倉哪些、預期Sharpe/MaxDD改善幅度。',
   'monthly-summary':'月度組合報告（300字，適合投資人）：核心指標、亮點、風險、展望。',
   'benchmark':'對比直接持BTC：收益/波動/回撤保護各維度優劣，持有本組合vs持BTC的理由。',
@@ -1085,11 +1123,13 @@ function renderOverview(){
   // metrics
   const metricsEl=document.getElementById('ov-metrics');
   const aum=p.aum||(p.assets.reduce((s,a)=>s+a.value,0));
+  const hasMetrics=p.sharpe!=null||p.mdd!=null||p.annual!=null;
+  const aiHint=hasMetrics?'':'AI 估算中…';
   const metrics=[
     {lbl:'AUM',val:aum?'$'+fmtNum(aum):p.assets.length?'$'+fmtNum(p.assets.reduce((s,a)=>s+a.value,0)):'—',cls:'g',sub:cur},
-    {lbl:'Sharpe Ratio',val:p.sharpe!=null?p.sharpe.toFixed(2):'—',cls:'',sub:'風險調整收益'},
-    {lbl:'Max Drawdown',val:p.mdd!=null?p.mdd+'%':'—',cls:'a',sub:'最大回撤'},
-    {lbl:'年化收益',val:p.annual!=null?(p.annual>0?'+':'')+p.annual+'%':'—',cls:'g',sub:'年化'},
+    {lbl:'Sharpe Ratio',val:p.sharpe!=null?p.sharpe.toFixed(2):aiHint,cls:p.sharpe!=null?'':'hint',sub:'風險調整收益'},
+    {lbl:'Max Drawdown',val:p.mdd!=null?p.mdd+'%':aiHint,cls:p.mdd!=null?'a':'hint',sub:'最大回撤'},
+    {lbl:'年化收益',val:p.annual!=null?(p.annual>0?'+':'')+p.annual+'%':aiHint,cls:p.annual!=null?'g':'hint',sub:'年化'},
   ];
   metricsEl.innerHTML=metrics.map(m=>`<div class="mc"><div class="lbl">${m.lbl}</div><div class="val ${m.cls}">${m.val}</div><div class="sub">${m.sub}</div></div>`).join('');
 
@@ -1865,6 +1905,16 @@ document.getElementById('btn-ov-ai')?.addEventListener('click',()=>{
 document.getElementById('advanced-section')?.addEventListener('toggle',function(){
   const arrow=this.querySelector('.adv-arrow');
   if(arrow) arrow.style.transform=this.open?'rotate(180deg)':'rotate(0deg)';
+});
+
+// 投資目標變動提示
+document.getElementById('p-goal')?.addEventListener('change',()=>{
+  showToast('投資目標已更新，點擊「儲存並分析」重新生成建議');
+});
+
+// 風險偏好變動提示
+document.getElementById('p-risk-pref')?.addEventListener('change',()=>{
+  showToast('風險偏好已更新，點擊「儲存並分析」重新生成建議');
 });
 
 // Wire live page enter/exit
