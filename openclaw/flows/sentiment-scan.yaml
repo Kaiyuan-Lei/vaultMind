@@ -1,0 +1,144 @@
+name: sentiment-scan
+description: "每 15 分鐘掃描衍生品市場（資金費率/OI/期貨溢價）與鏈上情緒指標，更新 sentiment.json"
+schedule: "*/15 * * * *"
+
+env:
+  ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+  COINGLASS_API_KEY: "${COINGLASS_API_KEY}"
+
+steps:
+  # ── Step 1: 抓取 BTC 資金費率（Binance 公開端點）────────────
+  - name: fetch-funding-rate
+    type: http
+    url: https://fapi.binance.com/fapi/v1/premiumIndex
+    params:
+      symbol: "BTCUSDT"
+    on_error: continue
+    output: funding_raw
+
+  # ── Step 2: 抓取 BTC 期貨未平倉合約（Binance）──────────────
+  - name: fetch-open-interest
+    type: http
+    url: https://fapi.binance.com/fapi/v1/openInterest
+    params:
+      symbol: "BTCUSDT"
+    on_error: continue
+    output: oi_raw
+
+  # ── Step 3: 抓取期貨基差（現貨 vs 期貨）─────────────────────
+  - name: fetch-spot-price
+    type: http
+    url: https://api.binance.com/api/v3/ticker/price
+    params:
+      symbol: "BTCUSDT"
+    on_error: continue
+    output: spot_raw
+
+  # ── Step 4: 抓取 BTC 未平倉合約歷史（7 天，用於 OI 圖表）──
+  - name: fetch-oi-history
+    type: http
+    url: https://fapi.binance.com/futures/data/openInterestHist
+    params:
+      symbol: "BTCUSDT"
+      period: "1d"
+      limit: "14"
+    on_error: continue
+    output: oi_history_raw
+
+  # ── Step 5: 計算衍生品指標並更新 sentiment.json ─────────────
+  - name: update-derivatives
+    type: transform
+    input: [funding_raw, oi_raw, spot_raw, oi_history_raw]
+    script: |
+      // ── 讀取現有 sentiment.json ──
+      const existing = JSON.parse(
+        require('fs').readFileSync('./data/sentiment.json', 'utf8')
+      );
+
+      // ── 資金費率（每 8 小時，Binance 返回 lastFundingRate）──
+      const fundingRate = funding_raw?.lastFundingRate != null
+        ? parseFloat((parseFloat(funding_raw.lastFundingRate) * 100).toFixed(4))
+        : existing.derivatives.btc_funding_rate_pct;
+
+      const fundingAnnualized = fundingRate != null
+        ? parseFloat((fundingRate * 3 * 365).toFixed(1))
+        : existing.derivatives.btc_funding_rate_8h_annualized_pct;
+
+      // ── 期貨溢價（basis）= (期貨標記價 - 現貨) / 現貨 × 100 ──
+      const markPrice  = parseFloat(funding_raw?.markPrice ?? 0);
+      const spotPrice  = parseFloat(spot_raw?.price ?? 0);
+      const basisPct = (markPrice && spotPrice)
+        ? parseFloat(((markPrice - spotPrice) / spotPrice * 100).toFixed(2))
+        : existing.derivatives.btc_futures_premium_pct;
+
+      // ── 未平倉合約（OI）──
+      const oiUsd = oi_raw?.openInterest != null
+        ? Math.round(parseFloat(oi_raw.openInterest) * spotPrice)
+        : existing.derivatives.btc_open_interest_usd;
+
+      // ── OI 7 日變化 ──
+      const oiHistory = (oi_history_raw ?? []).map(h => ({
+        date:    new Date(h.timestamp).toISOString().slice(0, 10),
+        oi_usd:  Math.round(parseFloat(h.sumOpenInterest) * spotPrice),
+      }));
+      const oiOldest = oiHistory[0]?.oi_usd;
+      const oiNewest = oiHistory[oiHistory.length - 1]?.oi_usd ?? oiUsd;
+      const oi7dChange = (oiOldest && oiNewest)
+        ? parseFloat(((oiNewest - oiOldest) / oiOldest * 100).toFixed(1))
+        : existing.derivatives.btc_open_interest_7d_change_pct;
+
+      // ── 更新 sentiment.json 的 derivatives 欄位 ──
+      const updated = {
+        ...existing,
+        timestamp: new Date().toISOString(),
+        derivatives: {
+          ...existing.derivatives,
+          btc_futures_premium_pct:              basisPct,
+          btc_funding_rate_pct:                 fundingRate,
+          btc_funding_rate_8h_annualized_pct:   fundingAnnualized,
+          btc_open_interest_usd:                oiUsd,
+          btc_open_interest_7d_change_pct:      oi7dChange,
+        },
+      };
+
+      return updated;
+    save: ./data/sentiment.json
+
+  # ── Step 6: Claude 市場情緒解讀 ──────────────────────────────
+  - name: claude-sentiment-analysis
+    type: claude
+    input: [funding_raw, oi_raw]
+    api_key: "${ANTHROPIC_API_KEY}"
+    model: claude-sonnet-4-20250514
+    max_tokens: 300
+    system_prompt: |
+      你是一位專業的加密市場情緒分析師，擅長解讀衍生品市場信號。
+      使用繁體中文，精簡扼要，控制在 150 字以內。
+    prompt: |
+      當前衍生品市場數據：
+      - BTC 資金費率：{{funding_raw.lastFundingRate}} / 8h
+      - BTC 未平倉合約：{{oi_raw.openInterest}} BTC
+      - Fear & Greed 指數：見 sentiment.json（最新值）
+
+      請判斷：
+      1. 市場槓桿水平（偏高/正常/偏低）
+      2. 是否存在去槓桿風險
+      3. 未來 24-48 小時的操作建議（1 句話）
+    output: sentiment_insight
+
+  # ── Step 7: 將 AI 洞察追加到 sentiment.json ──────────────────
+  - name: save-insight
+    type: transform
+    input: [sentiment_insight]
+    script: |
+      const existing = JSON.parse(
+        require('fs').readFileSync('./data/sentiment.json', 'utf8')
+      );
+      return {
+        ...existing,
+        ai_insight: {
+          text:      sentiment_insight,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    save: ./data/sentiment.json

@@ -1,0 +1,207 @@
+{
+  "timestamp": "2026-03-17T12:00:00Z",
+  "total_value_usd": 4210000,
+  "gross_long_usd": 4264600,
+  "metrics": {
+    "sharpe_ratio": 1.84,
+    "max_drawdown_pct": -8.2,
+    "annual_return_pct": 34.7,
+    "mtd_return_pct": 4.6,
+    "benchmark_return_pct": 22.4,
+    "var_95_1d_usd": -42000,
+    "cvar_95_1d_usd": -89000,
+    "beta_btc": 0.62,
+    "volatility_30d_pct": 18.4,
+    "risk_score": 42
+  },
+  "assets": [
+    {
+      "name": "ETH",
+      "category": "L1",
+      "qty": 420.5,
+      "price_usd": 2608.3,
+      "value_usd": 1096003,
+      "percentage": 25.7,
+      "pnl_usd": 84000,
+      "change_24h_pct": 2.1,
+      "risk": "medium",
+      "color": "#4da6ff"
+    },
+    {
+      "name": "BTC",
+      "category": "L1",
+      "qty": 12.8,
+      "price_usd": 68966.56,
+      "value_usd": 882772,
+      "percentage": 20.7,
+      "pnl_usd": 51000,
+      "change_24h_pct": 1.4,
+      "risk": "medium",
+      "color": "#f4a623"
+    },
+    {
+      "name": "RWA Bond",
+      "category": "RWA",
+      "qty": 1100,
+      "price_usd": 1023.5,
+      "value_usd": 1125854,
+      "percentage": 26.4,
+      "pnl_usd": 9000,
+      "change_24h_pct": 0.1,
+      "risk": "low",
+      "color": "#9b7eff"
+    },
+    {
+      "name": "USDC LP",
+      "category": "DeFi",
+      "qty": 545869,
+      "price_usd": 1.0,
+      "value_usd": 545869,
+      "percentage": 12.8,
+      "pnl_usd": 18000,
+      "change_24h_pct": 0.0,
+      "risk": "low",
+      "color": "#00d4a0"
+    },
+    {
+      "name": "Stable LP",
+      "category": "DeFi",
+      "qty": 383814,
+      "price_usd": 1.0,
+      "value_usd": 383814,
+      "percentage": 9.0,
+      "pnl_usd": 4000,
+      "change_24h_pct": 0.0,
+      "risk": "very_low",
+      "color": "#00b88a"
+    },
+    {
+      "name": "ARB",
+      "category": "L2",
+      "qty": 185700,
+      "price_usd": 1.24,
+      "value_usd": 230288,
+      "percentage": 5.4,
+      "pnl_usd": -12000,
+      "change_24h_pct": -3.2,
+      "risk": "high",
+      "color": "#ff5c6a"
+    }
+  ],
+  "hedges": [
+    {
+      "name": "BTC Perp Short",
+      "category": "Derivative",
+      "qty": -0.8,
+      "price_usd": 68250,
+      "value_usd": -54600,
+      "pnl_usd": -4000,
+      "change_24h_pct": -1.4,
+      "risk": "high",
+      "note": "Delta hedge for BTC Basis Trade"
+    }
+  ],
+  "strategies": [
+    {
+      "id": "eth-basis",
+      "name": "ETH Basis Trade",
+      "type": "Delta Neutral",
+      "tvl_usd": 820000,
+      "apy_pct": 18.4,
+      "sharpe": 2.1,
+      "max_drawdown_pct": -3.2,
+      "days_running": 180,
+      "status": "active",
+      "color": "#4da6ff"
+    },
+    {
+      "id": "aave-loop",
+      "name": "AAVE v3 Loop",
+      "type": "借貸套利",
+      "tvl_usd": 540000,
+      "apy_pct": 12.1,
+      "sharpe": 1.8,
+      "max_drawdown_pct": -2.1,
+      "days_running": 90,
+      "status": "active",
+      "color": "#9b7eff"
+    },
+    {
+      "id": "rwa-bond",
+      "name": "RWA Bond Yield",
+      "type": "代幣化債券",
+      "tvl_usd": 1100000,
+      "apy_pct": 6.8,
+      "sharpe": 3.2,
+      "max_drawdown_pct": -0.8,
+      "days_running": 365,
+      "status": "active",
+      "color": "#00d4a0"
+    },
+    {
+      "id": "stable-lp",
+      "name": "USDC/USDT LP",
+      "type": "穩定幣做市",
+      "tvl_usd": 380000,
+      "apy_pct": 9.3,
+      "sharpe": 4.1,
+      "max_drawdown_pct": -0.2,
+      "days_running": 60,
+      "status": "active",
+      "color": "#f4a623"
+    },
+    {
+      "id": "btc-funding",
+      "name": "BTC Perp Funding",
+      "type": "資金費率套利",
+      "tvl_usd": 290000,
+      "apy_pct": 22.7,
+      "sharpe": 1.2,
+      "max_drawdown_pct": -6.8,
+      "days_running": 30,
+      "status": "watch",
+      "alert": "funding_rate_declining",
+      "funding_rate_current_pct": 0.031,
+      "funding_rate_peak_pct": 0.091,
+      "funding_rate_exit_threshold_pct": 0.02,
+      "color": "#ff5c6a"
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-03-11",
+      "value_usd": 3980000,
+      "btc_benchmark_usd": 3901000
+    },
+    {
+      "date": "2026-03-12",
+      "value_usd": 4050000,
+      "btc_benchmark_usd": 3988000
+    },
+    {
+      "date": "2026-03-13",
+      "value_usd": 4120000,
+      "btc_benchmark_usd": 4102000
+    },
+    {
+      "date": "2026-03-14",
+      "value_usd": 4180000,
+      "btc_benchmark_usd": 4055000
+    },
+    {
+      "date": "2026-03-15",
+      "value_usd": 4210000,
+      "btc_benchmark_usd": 4231000
+    },
+    {
+      "date": "2026-03-16",
+      "value_usd": 4250000,
+      "btc_benchmark_usd": 4138000
+    },
+    {
+      "date": "2026-03-17",
+      "value_usd": 4210000,
+      "btc_benchmark_usd": 4367000
+    }
+  ]
+}

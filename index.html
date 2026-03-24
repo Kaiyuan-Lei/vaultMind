@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VaultMind · Web3 Portfolio Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#08090d; --s1:#0f1218; --s2:#161c26; --s3:#1d2535;
+  --text:#e2e8f0; --muted:#8896aa; --hint:#3d5068;
+  --accent:#00d4a0; --adim:rgba(0,212,160,.10); --ahover:#00b88a;
+  --danger:#ff4d4f; --ddim:rgba(255,77,79,.12);
+  --amber:#f4a623; --abdim:rgba(244,166,35,.12);
+  --blue:#4da6ff; --bdim:rgba(77,166,255,.12);
+  --purple:#9b7eff; --pdim:rgba(155,126,255,.12);
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.12);
+  --mono:"DM Mono",monospace; --r:8px; --rl:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;line-height:1.6;min-height:100vh}
+
+/* ── Shell layout ── */
+.shell{display:grid;grid-template-columns:220px 1fr;grid-template-rows:54px 1fr;min-height:100vh}
+
+/* ── Topbar ── */
+header{grid-column:1/-1;background:var(--s1);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:14px}
+.logo{font-size:14px;font-weight:500;color:var(--accent);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo svg{flex-shrink:0}
+.bar-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.bar-key{display:flex;align-items:center;gap:8px}
+.bar-key label{font-size:11px;color:var(--hint);white-space:nowrap}
+.bar-key input{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--muted);font-family:var(--mono);font-size:11px;width:220px;outline:none;transition:border-color .15s}
+.bar-key input:focus{border-color:var(--accent);color:var(--text)}
+.bar-key input::placeholder{color:var(--hint)}
+.bar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.bar-time{font-size:11px;color:var(--hint)}
+
+/* ── Sidebar ── */
+nav.side{background:var(--s1);border-right:1px solid var(--border);padding:16px 0;overflow-y:auto}
+.nav-sec{padding:6px 16px 4px;font-size:10px;color:var(--hint);letter-spacing:.1em;text-transform:uppercase}
+.nav-it{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;color:var(--muted);font-size:12px;border-left:2px solid transparent;transition:all .13s;user-select:none;outline:none}
+.nav-it:hover{color:var(--text);background:var(--adim)}
+.nav-it.active{color:var(--accent);background:var(--adim);border-left-color:var(--accent)}
+.nav-it:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:3px;background:var(--ddim);color:var(--danger)}
+
+/* ── Main ── */
+main{background:var(--bg);padding:22px;overflow-y:auto}
+.page{display:none}.page.active{display:block}
+
+/* ── Page header ── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.ph-title{font-size:19px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.ph-desc{font-size:11px;color:var(--hint);margin-top:2px}
+
+/* ── Cards ── */
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--rl);padding:16px;margin-bottom:12px}
+.card-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
+.grid13{display:grid;grid-template-columns:1fr 3fr;gap:12px;margin-bottom:12px}
+
+/* ── Metric cards ── */
+.m-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.mc{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.mc .lbl{font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.mc .val{font-size:22px;font-weight:500;color:var(--text);line-height:1}
+.mc .val.g{color:var(--accent)}.mc .val.r{color:var(--danger)}.mc .val.a{color:var(--amber)}
+.mc .sub{font-size:11px;color:var(--hint);margin-top:4px}
+
+/* ── Buttons ── */
+.btn{font-family:var(--mono);font-size:11px;padding:6px 13px;border-radius:6px;cursor:pointer;transition:all .13s;border:1px solid var(--border);background:transparent;color:var(--muted)}
+.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.btn:disabled,.btn.loading{opacity:.45;cursor:not-allowed;pointer-events:none}
+.btn-p{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500}
+.btn-p:hover{background:var(--ahover);border-color:var(--ahover);color:#000}
+.btn-p.loading{background:var(--adim);color:var(--accent)}
+.btn-danger{border-color:var(--ddim);color:var(--danger)}
+.btn-danger:hover{background:var(--ddim);border-color:var(--danger)}
+
+/* ── Input forms ── */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px}
+.form-group input,.form-group select,.form-group textarea{
+  width:100%;background:var(--s2);border:1px solid var(--border);border-radius:6px;
+  padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;
+  transition:border-color .13s;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group input::placeholder,.form-group textarea::placeholder{color:var(--hint)}
+.form-group select option{background:var(--s2);color:var(--text)}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.form-hint{font-size:10px;color:var(--hint);margin-top:3px}
+.input-unit{position:relative}
+.input-unit input{padding-right:36px}
+.input-unit span{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--hint);pointer-events:none}
+
+/* ── Asset table ── */
+.asset-table{width:100%;border-collapse:collapse;font-size:12px}
+.asset-table th{text-align:left;padding:6px 8px;font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);font-weight:400}
+.asset-table td{padding:8px 8px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.asset-table tr:last-child td{border-bottom:none}
+.asset-table tr:hover td{background:var(--s2)}
+.asset-table input{background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:12px;width:100%;outline:none;padding:0}
+.asset-table input:focus{background:var(--s2);border-radius:4px;padding:2px 6px;margin:-2px -6px}
+.asset-table select{background:transparent;border:none;color:var(--muted);font-family:var(--mono);font-size:11px;outline:none;cursor:pointer}
+.asset-table select:focus{background:var(--s2)}
+.del-btn{background:none;border:none;color:var(--hint);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:color .13s}
+.del-btn:hover{color:var(--danger)}
+.add-row-btn{width:100%;padding:8px;background:none;border:1px dashed var(--border);border-radius:6px;color:var(--hint);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .13s;margin-top:6px}
+.add-row-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500}
+.bg{background:var(--adim);color:var(--accent)}
+.br{background:var(--ddim);color:var(--danger)}
+.ba{background:var(--abdim);color:var(--amber)}
+.bb{background:var(--bdim);color:var(--blue)}
+.bp{background:var(--pdim);color:var(--purple)}
+
+/* ── Chart containers ── */
+.ch{position:relative;height:200px}.ch-lg{position:relative;height:240px}.ch-sm{position:relative;height:150px}
+
+/* ── AI Panel ── */
+.ai-panel{background:var(--s1);border:1px solid var(--border2);border-radius:var(--rl);overflow:hidden;margin-top:12px}
+.ai-head{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ai-head-title{font-size:12px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:7px}
+.ai-tag{font-size:10px;color:var(--accent);background:var(--adim);padding:1px 6px;border-radius:3px}
+.ai-body{padding:14px 16px;min-height:90px;max-height:400px;overflow-y:auto}
+.ai-body::-webkit-scrollbar{width:3px}
+.ai-body::-webkit-scrollbar-thumb{background:var(--border)}
+.ai-msg{font-size:12px;color:var(--muted);line-height:1.9;white-space:pre-wrap}
+.ai-msg strong{color:var(--accent);font-weight:500}
+.ai-msg em{color:var(--amber)}
+.ai-msg h3{color:var(--text);font-size:13px;margin:10px 0 4px}
+.ai-msg li{margin-left:16px;margin-bottom:2px}
+.ai-actions{padding:8px 16px;border-top:1px solid var(--border);display:flex;gap:7px;flex-wrap:wrap}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.cursor{display:inline-block;width:1px;height:12px;background:var(--accent);animation:blink 1s infinite;margin-left:1px;vertical-align:middle}
+
+/* ── Alloc bars ── */
+.alloc-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.alloc-row:last-child{border-bottom:none}
+.alloc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.alloc-name{font-size:12px;color:var(--text);width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.alloc-wrap{flex:1;height:4px;background:var(--s2);border-radius:2px;overflow:hidden}
+.alloc-bar{height:100%;border-radius:2px;transition:width .5s ease}
+.alloc-pct{font-size:11px;color:var(--muted);width:36px;text-align:right}
+.alloc-val{font-size:11px;color:var(--text);width:70px;text-align:right}
+
+/* ── Signal rows ── */
+.sig-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.sig-row:last-child{border-bottom:none}
+.sig-name{color:var(--muted)}
+
+/* ── Risk gauge ── */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;padding:6px 0}
+
+/* ── Tabs (sub) ── */
+.tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .13s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--text)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── Strategy cards ── */
+.strat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.strat-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:12px;cursor:pointer;transition:border-color .13s}
+.strat-card:hover{border-color:var(--accent)}
+.strat-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.strat-name{font-size:12px;font-weight:500;color:var(--text);margin-bottom:1px}
+.strat-type{font-size:10px;color:var(--hint);margin-bottom:8px}
+.strat-apy{font-size:20px;font-weight:500;color:var(--accent)}
+.strat-apy-lbl{font-size:10px;color:var(--hint);margin-bottom:8px}
+.strat-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0}
+.strat-row span:first-child{color:var(--hint)}
+.strat-row span:last-child{color:var(--text);font-weight:500}
+
+/* ── Onchain alert ── */
+.alert-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.alert-item:last-child{border-bottom:none}
+.alert-icon{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert-detail{font-size:11px;color:var(--muted);margin-top:1px}
+.alert-time{font-size:10px;color:var(--hint);margin-top:1px}
+
+/* ── Import/export ── */
+.import-area{border:2px dashed var(--border);border-radius:var(--r);padding:24px;text-align:center;color:var(--hint);font-size:12px;cursor:pointer;transition:all .13s}
+.import-area:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.import-area.drag{border-color:var(--accent);background:var(--adim)}
+.success-toast{position:fixed;bottom:24px;right:24px;background:var(--accent);color:#000;padding:10px 18px;border-radius:8px;font-size:12px;font-weight:500;opacity:0;transform:translateY(8px);transition:all .3s;pointer-events:none;z-index:999}
+.success-toast.show{opacity:1;transform:translateY(0)}
+
+/* ── Details/summary collapsible ── */
+details.card summary{user-select:none}
+details.card summary::-webkit-details-marker{display:none}
+details[open] .adv-arrow{transform:rotate(180deg)}
+details.card>div{border-top:1px solid var(--border)}
+
+/* ── Chip groups ── */
+.chip-group-label{font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .13s;border:1px solid var(--border);background:transparent;color:var(--muted);white-space:nowrap}
+.chip:hover{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.chip.active{border-color:var(--accent);color:var(--accent);background:var(--adim)}
+.chip-risk{border-color:var(--ddim);color:var(--danger)}
+.chip-risk:hover,.chip-risk.active{background:var(--ddim);border-color:var(--danger)}
+.chip-strategy{border-color:var(--pdim);color:var(--purple)}
+.chip-strategy:hover,.chip-strategy.active{background:var(--pdim);border-color:var(--purple)}
+.chip-market{border-color:var(--abdim);color:var(--amber)}
+.chip-market:hover,.chip-market.active{background:var(--abdim);border-color:var(--amber)}
+
+/* ── Chat bubbles ── */
+.chat-turn{display:flex;flex-direction:column;gap:8px}
+.chat-q{background:var(--s2);border:1px solid var(--border);border-radius:10px 10px 4px 10px;padding:10px 14px;font-size:12px;color:var(--muted);align-self:flex-end;max-width:80%}
+.chat-a{background:var(--s1);border:1px solid var(--border2);border-radius:4px 10px 10px 10px;padding:12px 16px;font-size:12px;line-height:1.85}
+.chat-a .ai-msg{color:var(--text)}
+.chat-meta{font-size:10px;color:var(--hint);margin-top:4px}
+.chat-loading{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--s1);border:1px solid var(--border2);border-radius:4px 10px 10px 10px;color:var(--hint);font-size:12px}
+.chat-textarea-wrap{position:relative}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .shell{grid-template-columns:1fr;grid-template-rows:54px auto 1fr}
+  nav.side{display:flex;flex-wrap:wrap;gap:4px;padding:8px;border-right:none;border-bottom:1px solid var(--border)}
+  .nav-it{border-left:none;border-bottom:2px solid transparent;padding:5px 10px}
+  .nav-it.active{border-left:none;border-bottom-color:var(--accent)}
+  .m-grid{grid-template-columns:1fr 1fr}
+  .grid2,.grid3,.grid13,.strat-grid{grid-template-columns:1fr}
+  header{flex-wrap:wrap;height:auto;padding:10px 14px}
+  .bar-key input{width:160px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══ TOPBAR ══ -->
+<header>
+  <div class="logo">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="none" stroke="#00d4a0" stroke-width="1.4" opacity="0.3"/>
+      <polygon points="12,4 19,8.5 19,15.5 12,20 5,15.5 5,8.5" fill="var(--s1)" stroke="#00d4a0" stroke-width="1.2"/>
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="#00d4a0" stroke-width="1.1" opacity="0.7"/>
+      <circle cx="12" cy="12" r="2" fill="none" stroke="#00d4a0" stroke-width="0.9" opacity="0.45"/>
+      <line x1="12" y1="7.5" x2="12" y2="9.2" stroke="#00d4a0" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="12" y1="14.8" x2="12" y2="16.5" stroke="#00d4a0" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="7.5" y1="12" x2="9.2" y2="12" stroke="#00d4a0" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="14.8" y1="12" x2="16.5" y2="12" stroke="#00d4a0" stroke-width="1.4" stroke-linecap="round"/>
+      <circle cx="12" cy="12" r="1.1" fill="#00d4a0"/>
+    </svg>
+    <span style="letter-spacing:-.3px">Vault<span style="font-weight:400;opacity:.75">Mind</span></span>
+  </div>
+  <div class="bar-sep"></div>
+  <div class="bar-key">
+    <label for="apiKeyInput">Anthropic API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off"/>
+  </div>
+  <div class="bar-sep"></div>
+  <div class="bar-key">
+    <label for="railwayUrlInput" style="white-space:nowrap">Railway URL</label>
+    <input type="text" id="railwayUrlInput" placeholder="https://vaultmind-xxx.railway.app" autocomplete="off" style="width:196px"/>
+  </div>
+  <div class="bar-right">
+    <div id="api-dot" class="status-dot" style="background:var(--hint)" title="未連接 Railway"></div>
+    <span id="api-status" class="bar-time" style="font-size:10px;color:var(--hint)">離線</span>
+    <div style="width:1px;height:14px;background:var(--border);margin:0 2px"></div>
+    <div class="status-dot"></div>
+    <span id="clock" class="bar-time"></span>
+  </div>
+</header>
+
+<!-- ══ SIDEBAR ══ -->
+<nav class="side" aria-label="主導航">
+  <div class="nav-sec">持倉管理</div>
+  <div class="nav-it active" data-page="input" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.3"/><line x1="7" y1="4" x2="7" y2="10" stroke="currentColor" stroke-width="1.3"/></svg>
+    輸入持倉數據
+  </div>
+  <div class="nav-it" data-page="overview" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="7.5" y="1" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="7.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+    組合總覽
+  </div>
+  <div class="nav-it" data-page="portfolio" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 7 L7 1.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 7 L11.5 9.5" stroke="currentColor" stroke-width="1.3"/></svg>
+    持倉分析
+  </div>
+  <div class="nav-it" data-page="risk" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1 L13 12 L1 12 Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><line x1="7" y1="5" x2="7" y2="8.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="10.5" r=".8" fill="currentColor"/></svg>
+    風控分析
+  </div>
+  <div class="nav-it" data-page="strategy" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><polyline points="1,10 4,6 7,8 10,3 13,5" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linejoin="round"/></svg>
+    策略分析
+  </div>
+  <div class="nav-sec" style="margin-top:8px">市場情報</div>
+  <div class="nav-it" data-page="live" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="2" fill="currentColor" opacity=".5"/><line x1="7" y1="1.5" x2="7" y2="3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="7" y1="11" x2="7" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="1.5" y1="7" x2="3" y2="7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="11" y1="7" x2="12.5" y2="7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    即時數據
+    <span class="nav-badge" id="alert-badge" style="display:none">0</span>
+  </div>
+  <div class="nav-it" data-page="ai-chat" tabindex="0" role="button">
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M1 2a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H8l-3 3v-3H2a1 1 0 01-1-1V2z" stroke="currentColor" stroke-width="1.3"/></svg>
+    AI 自由問答
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main>
+
+<!-- ══════════════════════════════════════════
+     PAGE: 輸入持倉數據
+══════════════════════════════════════════ -->
+<div id="page-input" class="page active">
+  <div class="ph">
+    <div>
+      <div class="ph-title">輸入持倉數據</div>
+      <div class="ph-desc">填入你的持倉，VaultMind 的所有 AI 分析將基於這份數據</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" id="btn-load-sample">載入範例數據</button>
+      <button class="btn btn-p" id="btn-save-portfolio">儲存並分析 →</button>
+    </div>
+  </div>
+
+  <!-- 基本信息 (single full-width card) -->
+  <div class="card">
+    <div class="form-row" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+      <div class="form-group">
+        <label>組合名稱</label>
+        <input type="text" id="p-name" placeholder="My Portfolio"/>
+      </div>
+      <div class="form-group">
+        <label>基礎貨幣</label>
+        <select id="p-currency">
+          <option value="USD">USD</option>
+          <option value="HKD">HKD</option>
+          <option value="USDT">USDT</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>總資產 (AUM)</label>
+        <div class="input-unit"><input type="number" id="p-aum" placeholder="1000000"/><span id="p-aum-unit">USD</span></div>
+      </div>
+      <div class="form-group">
+        <label>投資期限</label>
+        <select id="p-horizon">
+          <option value="short">短期 (&lt;1年)</option>
+          <option value="mid" selected>中期 (1-3年)</option>
+          <option value="long">長期 (3年+)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>風險偏好</label>
+        <select id="p-risk-pref">
+          <option value="conservative">保守型</option>
+          <option value="moderate" selected>穩健型</option>
+          <option value="aggressive">積極型</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>投資目標 / 備注</label>
+      <textarea id="p-goal" placeholder="例：主要目標是跑贏 BTC，控制最大回撤在 15% 以內，對 RWA 和 DeFi 收益有興趣…" style="min-height:60px"></textarea>
+    </div>
+  </div>
+
+  <!-- 進階數據（可摺疊） -->
+  <details class="card" id="advanced-section" style="padding:0">
+    <summary style="padding:14px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--text)">
+      <span>進階數據 <span style="font-weight:400;color:var(--hint);font-size:10px">績效指標 · 市場背景 · DeFi 策略（可選，填入後 AI 分析更精準）</span></span>
+      <span class="adv-arrow" style="color:var(--hint);font-size:11px;transition:transform .2s">▼</span>
+    </summary>
+    <div style="padding:0 16px 16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+        <!-- 績效指標 -->
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">📊 績效指標</div>
+          <div class="form-row" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">
+            <div class="form-group">
+              <label>Sharpe Ratio</label>
+              <input type="number" id="p-sharpe" placeholder="e.g. 1.84" step="0.01"/>
+            </div>
+            <div class="form-group">
+              <label>最大回撤 (%)</label>
+              <div class="input-unit"><input type="number" id="p-mdd" placeholder="-8.2"/><span>%</span></div>
+            </div>
+            <div class="form-group">
+              <label>年化收益 (%)</label>
+              <div class="input-unit"><input type="number" id="p-annual" placeholder="34.7"/><span>%</span></div>
+            </div>
+            <div class="form-group">
+              <label>Beta vs BTC</label>
+              <input type="number" id="p-beta" placeholder="0.62" step="0.01"/>
+            </div>
+            <div class="form-group">
+              <label>VaR 95% 1日 (%)</label>
+              <div class="input-unit"><input type="number" id="p-var" placeholder="-1.0"/><span>%</span></div>
+            </div>
+            <div class="form-group">
+              <label>年化波動率 (%)</label>
+              <div class="input-unit"><input type="number" id="p-vol" placeholder="18.4"/><span>%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 市場背景 -->
+        <div>
+          <div style="font-size:11px;color:var(--muted);font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">🌐 市場背景</div>
+          <div class="form-row" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">
+            <div class="form-group">
+              <label>BTC 現價 (USD)</label>
+              <input type="number" id="m-btc" placeholder="68000"/>
+            </div>
+            <div class="form-group">
+              <label>ETH 現價 (USD)</label>
+              <input type="number" id="m-eth" placeholder="2840"/>
+            </div>
+            <div class="form-group">
+              <label>Fear &amp; Greed</label>
+              <input type="number" id="m-fg" placeholder="0–100" min="0" max="100"/>
+            </div>
+            <div class="form-group">
+              <label>BTC 資金費率 (%)</label>
+              <div class="input-unit"><input type="number" id="m-funding" placeholder="0.031" step="0.001"/><span>%</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DeFi 策略 -->
+      <div style="margin-top:14px">
+        <div style="font-size:11px;color:var(--muted);font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          ⚡ DeFi 策略
+          <button class="btn" id="add-strat-btn" style="font-size:10px;padding:3px 10px">＋ 新增</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="asset-table">
+            <thead>
+              <tr><th>策略名稱</th><th>類型</th><th>TVL</th><th>APY %</th><th>Sharpe</th><th>Max DD %</th><th>狀態</th><th></th></tr>
+            </thead>
+            <tbody id="strat-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- 持倉明細 -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      持倉明細
+      <span style="font-size:10px;color:var(--hint)">點擊格子直接編輯 · 金額單位與上方基礎貨幣一致</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="asset-table">
+        <thead>
+          <tr>
+            <th>資產名稱</th>
+            <th>類別</th>
+            <th>持倉量</th>
+            <th>現價</th>
+            <th>市值</th>
+            <th>佔比 %</th>
+            <th>未實現 PnL</th>
+            <th>24h 變化 %</th>
+            <th>風險評級</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="asset-tbody"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" id="add-asset-btn">＋ 新增資產</button>
+  </div>
+
+
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: 組合總覽
+══════════════════════════════════════════ -->
+<div id="page-overview" class="page">
+  <div class="ph">
+    <div><div class="ph-title">組合總覽</div><div class="ph-desc" id="ov-desc">—</div></div>
+    <button class="btn btn-p" id="btn-ov-ai">AI 健康診斷 ↗</button>
+  </div>
+  <div class="m-grid" id="ov-metrics"></div>
+  <div class="grid13">
+    <div class="card"><div class="card-title">資產配置</div><div id="ov-alloc"></div></div>
+    <div class="card"><div class="card-title">淨值曲線（示意）</div><div class="ch-lg"><canvas id="navChart"></canvas></div></div>
+  </div>
+  <div class="ai-panel">
+    <div class="ai-head"><div class="ai-head-title">AI 組合診斷 <span class="ai-tag">Claude</span></div></div>
+    <div class="ai-body"><div class="ai-msg" id="ov-ai-msg" style="color:var(--hint)">點擊「AI 健康診斷」開始分析。</div></div>
+    <div class="ai-actions">
+      <button class="btn" data-ai-page="overview" data-ai-prompt="quick-rebalance">快速再平衡建議</button>
+      <button class="btn" data-ai-page="overview" data-ai-prompt="monthly-summary">生成月度績效摘要</button>
+      <button class="btn" data-ai-page="overview" data-ai-prompt="benchmark">vs 基準比較分析</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: 持倉分析
+══════════════════════════════════════════ -->
+<div id="page-portfolio" class="page">
+  <div class="ph">
+    <div><div class="ph-title">持倉分析</div><div class="ph-desc">相關性 · 集中度 · 個別資產診斷</div></div>
+    <button class="btn btn-p" data-ai-page="portfolio" data-ai-prompt="correlation">AI 相關性分析 ↗</button>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="card-title">持倉分布</div><div class="ch"><canvas id="pieChart"></canvas></div></div>
+    <div class="card"><div class="card-title">各資產 PnL</div><div class="ch"><canvas id="pnlChart"></canvas></div></div>
+  </div>
+  <div class="card"><div class="card-title">資產相關性矩陣</div><div id="heatmap"></div></div>
+  <div class="ai-panel">
+    <div class="ai-head"><div class="ai-head-title">AI 持倉診斷 <span class="ai-tag">Claude</span></div></div>
+    <div class="ai-body"><div class="ai-msg" id="portfolio-ai-msg" style="color:var(--hint)">點擊「AI 相關性分析」或下方按鈕。</div></div>
+    <div class="ai-actions">
+      <button class="btn" data-ai-page="portfolio" data-ai-prompt="concentration">集中度風險</button>
+      <button class="btn" data-ai-page="portfolio" data-ai-prompt="worst-asset">最弱資產診斷</button>
+      <button class="btn" data-ai-page="portfolio" data-ai-prompt="diversify">分散化方案</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: 風控分析
+══════════════════════════════════════════ -->
+<div id="page-risk" class="page">
+  <div class="ph">
+    <div><div class="ph-title">風控分析</div><div class="ph-desc">VaR · 壓力測試 · 風險因子</div></div>
+    <button class="btn btn-p" data-ai-page="risk" data-ai-prompt="full-risk">執行壓力測試 ↗</button>
+  </div>
+  <div class="m-grid" id="risk-metrics"></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">風險評分</div>
+      <div class="gauge-wrap">
+        <canvas id="riskGauge" width="200" height="110"></canvas>
+        <div id="risk-score-val" style="font-size:26px;font-weight:500;color:var(--amber);margin-top:2px">—</div>
+        <div style="font-size:11px;color:var(--hint)" id="risk-score-lbl">請先輸入持倉數據</div>
+      </div>
+      <div id="risk-factors" style="margin-top:10px"></div>
+    </div>
+    <div class="card"><div class="card-title">情景壓力測試</div><div class="ch"><canvas id="scenarioChart"></canvas></div></div>
+  </div>
+  <div class="ai-panel">
+    <div class="ai-head"><div class="ai-head-title">AI 風控建議 <span class="ai-tag">Claude</span></div></div>
+    <div class="ai-body"><div class="ai-msg" id="risk-ai-msg" style="color:var(--hint)">點擊「執行壓力測試」獲取風險評估。</div></div>
+    <div class="ai-actions">
+      <button class="btn" data-ai-page="risk" data-ai-prompt="scenario-btc">BTC -30% 情景</button>
+      <button class="btn" data-ai-page="risk" data-ai-prompt="hedge">對沖建議</button>
+      <button class="btn" data-ai-page="risk" data-ai-prompt="kelly">凱利倉位優化</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: 策略分析
+══════════════════════════════════════════ -->
+<div id="page-strategy" class="page">
+  <div class="ph">
+    <div><div class="ph-title">策略分析</div><div class="ph-desc">DeFi 策略績效評估與優化</div></div>
+    <button class="btn btn-p" data-ai-page="strategy" data-ai-prompt="strategy-eval">AI 策略評估 ↗</button>
+  </div>
+  <div class="strat-grid" id="strat-cards-display"></div>
+  <div id="no-strat-msg" class="card" style="text-align:center;padding:30px;color:var(--hint);display:none">
+    尚未輸入策略數據，請前往「輸入持倉數據」頁面新增策略。
+  </div>
+  <div class="ai-panel">
+    <div class="ai-head"><div class="ai-head-title">AI 策略優化 <span class="ai-tag">Claude</span></div></div>
+    <div class="ai-body"><div class="ai-msg" id="strategy-ai-msg" style="color:var(--hint)">點擊策略卡片或「AI 策略評估」。</div></div>
+    <div class="ai-actions">
+      <button class="btn" data-ai-page="strategy" data-ai-prompt="exit-signal">退出信號分析</button>
+      <button class="btn" data-ai-page="strategy" data-ai-prompt="add-strategy">推薦新策略</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: 即時數據（OpenClaw → Railway API）
+══════════════════════════════════════════ -->
+<div id="page-live" class="page">
+  <div class="ph">
+    <div><div class="ph-title">即時數據</div><div class="ph-desc">OpenClaw 自動抓取 · 每 2-15 分鐘更新</div></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span id="live-last-update" style="font-size:10px;color:var(--hint)"></span>
+      <button class="btn" id="btn-live-refresh">↻ 刷新</button>
+      <button class="btn btn-p" data-ai-page="live" data-ai-prompt="live-interpret">AI 解讀 ↗</button>
+    </div>
+  </div>
+
+  <!-- Connection required notice -->
+  <div id="live-no-conn" class="card" style="text-align:center;padding:32px;color:var(--hint)">
+    <div style="font-size:22px;margin-bottom:10px">⚡</div>
+    <div style="font-size:13px;color:var(--text);margin-bottom:6px">未連接 Railway</div>
+    <div style="font-size:12px;margin-bottom:16px">在頂部填入你的 Railway URL，即可從 OpenClaw 拉取即時鏈上數據</div>
+    <div style="font-size:11px;color:var(--hint);background:var(--s2);border-radius:6px;padding:10px 16px;display:inline-block;text-align:left">
+      格式：<code style="color:var(--accent)">https://vaultmind-xxx.railway.app</code>
+    </div>
+  </div>
+
+  <!-- Live content (shown when connected) -->
+  <div id="live-content" style="display:none">
+
+    <!-- Metrics strip -->
+    <div class="m-grid" id="live-metrics"></div>
+
+    <div class="grid2">
+      <!-- Onchain Alerts -->
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between">
+          鏈上大額警報
+          <span id="live-alert-count" class="badge br"></span>
+        </div>
+        <div id="live-alerts"></div>
+      </div>
+
+      <!-- Sentiment signals -->
+      <div class="card">
+        <div class="card-title">市場情緒指標</div>
+        <div id="live-sentiment-signals"></div>
+      </div>
+    </div>
+
+    <!-- Stable flow chart -->
+    <div class="card">
+      <div class="card-title">穩定幣鑄造 / 贖回流量（7日）</div>
+      <div class="ch"><canvas id="liveFlowChart"></canvas></div>
+    </div>
+
+    <!-- Protocol TVL -->
+    <div class="card">
+      <div class="card-title">DeFi 協議 TVL</div>
+      <div id="live-tvl"></div>
+    </div>
+
+  </div>
+
+  <!-- AI interpretation panel -->
+  <div class="ai-panel" id="live-ai-panel" style="display:none">
+    <div class="ai-head">
+      <div class="ai-head-title">AI 即時數據解讀 <span class="ai-tag">Claude</span></div>
+      <button id="btn-live-tg" class="btn" style="font-size:10px;padding:3px 10px" title="推送到 Telegram">✈ Telegram</button>
+    </div>
+    <div class="ai-body"><div class="ai-msg" id="live-ai-msg" style="color:var(--hint)">點擊「AI 解讀」獲取即時鏈上數據分析。</div></div>
+    <div class="ai-actions">
+      <button class="btn" data-ai-page="live" data-ai-prompt="live-whale">Whale 行為解讀</button>
+      <button class="btn" data-ai-page="live" data-ai-prompt="live-sentiment">情緒週期判斷</button>
+      <button class="btn" data-ai-page="live" data-ai-prompt="live-action">給出今日操作建議</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE: AI 問答
+══════════════════════════════════════════ -->
+<div id="page-ai-chat" class="page">
+  <div class="ph">
+    <div><div class="ph-title">AI 問答</div><div class="ph-desc">基於你的持倉，問任何投資問題 · Ctrl+Enter 發送</div></div>
+  </div>
+
+  <!-- 情境 chips（按類別分組） -->
+  <div class="card" style="margin-bottom:10px">
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px">
+      <span style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.08em">快捷情境</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <button class="btn" id="btn-clear-chat" style="font-size:10px;padding:2px 8px">清除回覆</button>
+    </div>
+    <div id="chip-groups" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+
+  <!-- 自由輸入 -->
+  <div class="card">
+    <div style="position:relative">
+      <textarea id="chat-input"
+        placeholder="輸入任何問題，例如：&#10;• 我的 ARB 倉位虧損 12%，現在 BTC 資金費率持續下降，是否應該全面降低加密敞口？&#10;• 幫我計算：如果把 ETH 的 10% 換成穩定幣，Sharpe 和 Max DD 預計如何變化？&#10;• 現在適合開新的流動性挖礦倉位嗎？風險點在哪裡？"
+        style="width:100%;min-height:88px;resize:vertical;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px 90px 10px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .13s;line-height:1.7"
+        id="chat-textarea"></textarea>
+      <div style="position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+        <button class="btn btn-p" id="btn-chat-send" style="padding:5px 12px;font-size:11px">發送 ↗</button>
+        <span style="font-size:9px;color:var(--hint)">Ctrl+Enter</span>
+      </div>
+    </div>
+    <!-- 字數 / token 估算 -->
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--hint)">
+      <span id="chat-char-count">0 字</span>
+      <span id="chat-token-est" style="color:var(--hint)"></span>
+    </div>
+  </div>
+
+  <!-- 對話歷史 -->
+  <div id="chat-history" style="display:flex;flex-direction:column;gap:10px"></div>
+</div>
+
+</main>
+</div><!-- .shell -->
+
+<!-- Toast -->
+<div class="success-toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+//  全局狀態
+// ════════════════════════════════════════════════════════════
+let portfolio = { // 用戶輸入的持倉數據
+  name:'', currency:'USD', aum:0, horizon:'mid', riskPref:'moderate', goal:'',
+  sharpe:null, mdd:null, annual:null, beta:null, var95:null, vol:null,
+  btcPrice:null, ethPrice:null, fearGreed:null, fundingRate:null,
+  assets:[], strategies:[],
+};
+const chartInstances = {};
+const activeControllers = {};
+let assetRowId = 0, stratRowId = 0;
+
+// ────────────────────────────────────────────────────────────
+//  Clock
+// ────────────────────────────────────────────────────────────
+function updateClock(){const el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('zh-HK',{hour12:false})+' HKT'}
+setInterval(updateClock,1000);updateClock();
+
+// ────────────────────────────────────────────────────────────
+//  Tab navigation
+// ────────────────────────────────────────────────────────────
+function initNav(){
+  document.querySelectorAll('.nav-it').forEach(item=>{
+    const go=()=>{
+      const pg=item.dataset.page; if(!pg) return;
+      document.querySelectorAll('.nav-it').forEach(n=>{n.classList.remove('active');n.removeAttribute('aria-current')});
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      item.classList.add('active'); item.setAttribute('aria-current','page');
+      const target=document.getElementById('page-'+pg);
+      if(target) target.classList.add('active');
+      onPageEnter(pg);
+    };
+    item.addEventListener('click',go);
+    item.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});
+  });
+}
+function onPageEnter(pg){
+  if(pg==='overview') renderOverview();
+  if(pg==='portfolio') renderPortfolio();
+  if(pg==='risk') renderRisk();
+  if(pg==='strategy') renderStrategy();
+  if(pg==='live') startLiveRefresh();
+  else stopLiveRefresh();
+}
+
+// ────────────────────────────────────────────────────────────
+//  Chart helpers
+// ────────────────────────────────────────────────────────────
+const C={text:'#e2e8f0',muted:'#8896aa',hint:'#3d5068',grid:'#1a2535',
+  green:'#00d4a0',gbg:'rgba(0,212,160,.08)',amber:'#f4a623',red:'#ff4d4f',
+  blue:'#4da6ff',purple:'#9b7eff',mono:'"DM Mono",monospace'};
+function destroyChart(id){if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id]}}
+const scaleBase={grid:{color:C.grid},border:{color:C.grid},ticks:{color:C.muted,font:{family:C.mono,size:10}}};
+
+// ────────────────────────────────────────────────────────────
+//  Asset row management
+// ────────────────────────────────────────────────────────────
+const ASSET_COLORS=['#4da6ff','#f4a623','#9b7eff','#00d4a0','#ff4d4f','#fdb94b','#00b88a','#ff9f43','#ee5a24','#0652dd'];
+function addAssetRow(data={}){
+  const id=assetRowId++;
+  const color=ASSET_COLORS[id%ASSET_COLORS.length];
+  const tr=document.createElement('tr');
+  tr.dataset.rid=id;
+  tr.innerHTML=`
+    <td><input type="text" placeholder="e.g. ETH" value="${data.name||''}" data-field="name" style="width:80px"/></td>
+    <td><select data-field="category">
+      <option value="L1"${data.category==='L1'?' selected':''}>L1</option>
+      <option value="L2"${data.category==='L2'?' selected':''}>L2</option>
+      <option value="DeFi"${data.category==='DeFi'?' selected':''}>DeFi</option>
+      <option value="RWA"${data.category==='RWA'?' selected':''}>RWA</option>
+      <option value="Stablecoin"${data.category==='Stablecoin'?' selected':''}>Stable</option>
+      <option value="CEX"${data.category==='CEX'?' selected':''}>CEX</option>
+      <option value="Other"${data.category==='Other'?' selected':''}>Other</option>
+    </select></td>
+    <td><input type="number" placeholder="0" value="${data.qty||''}" data-field="qty" style="width:90px"/></td>
+    <td><input type="number" placeholder="0" value="${data.price||''}" data-field="price" style="width:90px"/></td>
+    <td><input type="number" placeholder="auto" value="${data.value||''}" data-field="value" style="width:90px" title="留空自動計算 qty×price"/></td>
+    <td><input type="number" placeholder="auto" value="${data.pct||''}" data-field="pct" style="width:54px" title="留空自動計算"/></td>
+    <td><input type="number" placeholder="0" value="${data.pnl||''}" data-field="pnl" style="width:80px"/></td>
+    <td><input type="number" placeholder="0" value="${data.change24h||''}" data-field="change24h" style="width:60px"/></td>
+    <td><select data-field="risk">
+      <option value="very_low"${data.risk==='very_low'?' selected':''}>極低</option>
+      <option value="low"${data.risk==='low'?' selected':''}>低</option>
+      <option value="medium"${(!data.risk||data.risk==='medium')?' selected':''}>中</option>
+      <option value="high"${data.risk==='high'?' selected':''}>高</option>
+    </select></td>
+    <td><button class="del-btn" data-del-rid="${id}">✕</button></td>`;
+  tr.style.setProperty('--row-color', color);
+  document.getElementById('asset-tbody').appendChild(tr);
+}
+function addStratRow(data={}){
+  const id=stratRowId++;
+  const tr=document.createElement('tr');
+  tr.dataset.srid=id;
+  tr.innerHTML=`
+    <td><input type="text" placeholder="策略名稱" value="${data.name||''}" data-field="name" style="width:120px"/></td>
+    <td><select data-field="type">
+      <option value="Delta Neutral"${data.type==='Delta Neutral'?' selected':''}>Delta Neutral</option>
+      <option value="借貸套利"${data.type==='借貸套利'?' selected':''}>借貸套利</option>
+      <option value="代幣化債券"${data.type==='代幣化債券'?' selected':''}>代幣化債券</option>
+      <option value="穩定幣做市"${data.type==='穩定幣做市'?' selected':''}>穩定幣做市</option>
+      <option value="資金費率"${data.type==='資金費率'?' selected':''}>資金費率</option>
+      <option value="流動性挖礦"${data.type==='流動性挖礦'?' selected':''}>流動性挖礦</option>
+      <option value="Other"${data.type==='Other'?' selected':''}>Other</option>
+    </select></td>
+    <td><input type="number" placeholder="0" value="${data.tvl||''}" data-field="tvl" style="width:90px"/></td>
+    <td><input type="number" placeholder="0" value="${data.apy||''}" data-field="apy" style="width:60px"/></td>
+    <td><input type="number" placeholder="" value="${data.sharpe||''}" data-field="sharpe" style="width:60px"/></td>
+    <td><input type="number" placeholder="" value="${data.maxdd||''}" data-field="maxdd" style="width:60px"/></td>
+    <td><select data-field="status">
+      <option value="active"${(!data.status||data.status==='active')?' selected':''}>運行中</option>
+      <option value="watch"${data.status==='watch'?' selected':''}>監控中</option>
+      <option value="paused"${data.status==='paused'?' selected':''}>暫停</option>
+    </select></td>
+    <td><button class="del-btn" data-del-srid="${id}">✕</button></td>`;
+  document.getElementById('strat-tbody').appendChild(tr);
+}
+
+// ────────────────────────────────────────────────────────────
+//  Read form → portfolio object
+// ────────────────────────────────────────────────────────────
+function readPortfolio(){
+  const g=id=>document.getElementById(id)?.value.trim()||'';
+  const n=id=>parseFloat(document.getElementById(id)?.value)||null;
+  portfolio.name=g('p-name')||'My Portfolio';
+  portfolio.currency=g('p-currency')||'USD';
+  portfolio.aum=n('p-aum')||0;
+  portfolio.horizon=g('p-horizon');
+  portfolio.riskPref=g('p-risk-pref');
+  portfolio.goal=g('p-goal');
+  portfolio.sharpe=n('p-sharpe');
+  portfolio.mdd=n('p-mdd');
+  portfolio.annual=n('p-annual');
+  portfolio.beta=n('p-beta');
+  portfolio.var95=n('p-var');
+  portfolio.vol=n('p-vol');
+  portfolio.btcPrice=n('m-btc');
+  portfolio.ethPrice=n('m-eth');
+  portfolio.fearGreed=n('m-fg');
+  portfolio.fundingRate=n('m-funding');
+
+  // assets
+  const assets=[];
+  document.querySelectorAll('#asset-tbody tr').forEach(tr=>{
+    const f=field=>tr.querySelector(`[data-field="${field}"]`)?.value;
+    const name=f('name')?.trim(); if(!name) return;
+    const qty=parseFloat(f('qty'))||0;
+    const price=parseFloat(f('price'))||0;
+    let value=parseFloat(f('value'))||0;
+    if(!value && qty && price) value=qty*price;
+    let pct=parseFloat(f('pct'))||0;
+    assets.push({name,category:f('category')||'Other',qty,price,value,pct,
+      pnl:parseFloat(f('pnl'))||0,change24h:parseFloat(f('change24h'))||0,risk:f('risk')||'medium'});
+  });
+  // auto-calc pct if AUM is known
+  const totalVal=assets.reduce((s,a)=>s+a.value,0);
+  const base=portfolio.aum||totalVal;
+  assets.forEach(a=>{if(!a.pct&&a.value&&base) a.pct=+(a.value/base*100).toFixed(1)});
+  portfolio.assets=assets;
+
+  // strategies
+  const strategies=[];
+  document.querySelectorAll('#strat-tbody tr').forEach(tr=>{
+    const f=field=>tr.querySelector(`[data-field="${field}"]`)?.value;
+    const name=f('name')?.trim(); if(!name) return;
+    strategies.push({name,type:f('type'),tvl:parseFloat(f('tvl'))||0,
+      apy:parseFloat(f('apy'))||0,sharpe:parseFloat(f('sharpe'))||null,
+      maxdd:parseFloat(f('maxdd'))||null,status:f('status')||'active'});
+  });
+  portfolio.strategies=strategies;
+}
+
+// ────────────────────────────────────────────────────────────
+//  Build AI context string from portfolio
+// ────────────────────────────────────────────────────────────
+function buildContext(){
+  const p=portfolio;
+  if(!p.aum && !p.assets.length) return '（用戶尚未輸入持倉數據）';
+  const cur=p.currency||'USD';
+  let ctx=`【組合信息】
+名稱：${p.name} | 基礎貨幣：${cur} | AUM：${p.aum?p.aum.toLocaleString()+' '+cur:'未填'}
+投資期限：${{short:'短期<1年',mid:'中期1-3年',long:'長期3年+'}[p.horizon]||p.horizon}
+風險偏好：${{conservative:'保守型（波動<10%）',moderate:'穩健型（波動10-20%）',aggressive:'積極型（波動>20%）'}[p.riskPref]||p.riskPref}
+投資目標：${p.goal||'未填'}\n`;
+
+  const perf=[];
+  if(p.sharpe!=null) perf.push(`Sharpe ${p.sharpe}`);
+  if(p.mdd!=null) perf.push(`Max DD ${p.mdd}%`);
+  if(p.annual!=null) perf.push(`年化 ${p.annual}%`);
+  if(p.beta!=null) perf.push(`Beta ${p.beta}`);
+  if(p.var95!=null) perf.push(`VaR95% ${p.var95}%`);
+  if(p.vol!=null) perf.push(`波動率 ${p.vol}%`);
+  if(perf.length) ctx+=`\n【績效指標】${perf.join(' | ')}`;
+
+  const mkt=[];
+  if(p.btcPrice) mkt.push(`BTC $${p.btcPrice.toLocaleString()}`);
+  if(p.ethPrice) mkt.push(`ETH $${p.ethPrice.toLocaleString()}`);
+  if(p.fearGreed!=null) mkt.push(`Fear&Greed ${p.fearGreed}`);
+  if(p.fundingRate!=null) mkt.push(`BTC資金費率 ${p.fundingRate}%`);
+  if(mkt.length) ctx+=`\n【市場背景】${mkt.join(' | ')}`;
+
+  if(p.assets.length){
+    ctx+=`\n\n【持倉明細】\n`;
+    p.assets.forEach(a=>{
+      ctx+=`- ${a.name}（${a.category}）：`;
+      if(a.qty) ctx+=`持倉 ${a.qty}，`;
+      if(a.price) ctx+=`現價 ${a.price} ${cur}，`;
+      if(a.value) ctx+=`市值 ${a.value.toLocaleString()} ${cur}，`;
+      if(a.pct) ctx+=`佔比 ${a.pct}%，`;
+      if(a.pnl) ctx+=`PnL ${a.pnl>0?'+':''}${a.pnl.toLocaleString()} ${cur}，`;
+      if(a.change24h) ctx+=`24h ${a.change24h>0?'+':''}${a.change24h}%，`;
+      ctx+=`風險 ${a.risk}\n`;
+    });
+  }
+
+  if(p.strategies.length){
+    ctx+=`\n【DeFi 策略】\n`;
+    p.strategies.forEach(s=>{
+      ctx+=`- ${s.name}（${s.type}）：TVL ${s.tvl.toLocaleString()} ${cur}，APY ${s.apy}%`;
+      if(s.sharpe) ctx+=`，Sharpe ${s.sharpe}`;
+      if(s.maxdd) ctx+=`，Max DD ${s.maxdd}%`;
+      ctx+=`，${s.status}\n`;
+    });
+  }
+  return ctx;
+}
+
+// ────────────────────────────────────────────────────────────
+//  Claude API — token-efficient system prompt + prompt map
+// ────────────────────────────────────────────────────────────
+// System prompt kept lean: role + output rules only (no examples)
+const SYSTEM_PROMPT=`Web3/DeFi資產管理分析師。精通：DeFi策略、鏈上分析、組合風控、香港SFC監管。
+規則：①繁體中文 ②具體數字+觸發條件 ③Markdown：**粗體**標題、- 列表、> 警示 ④300字內，複雜問題可至500字 ⑤數據不足時先分析已有數據再列出缺口`;
+
+// Prompt map: short, precise instructions — context appended separately
+const PROMPT_MAP={
+  // overview
+  'overview-main':'評估組合健康：風險調整收益、最大風險集中點、3條再平衡建議（含比例和預期改善）。',
+  'quick-rebalance':'立即可執行的再平衡：減持哪些、加倉哪些、預期Sharpe/MaxDD改善幅度。',
+  'monthly-summary':'月度組合報告（300字，適合投資人）：核心指標、亮點、風險、展望。',
+  'benchmark':'對比直接持BTC：收益/波動/回撤保護各維度優劣，持有本組合vs持BTC的理由。',
+  // portfolio
+  'correlation':'識別高相關持倉（>0.7）、集中風險，給出具體分散化比例方案。',
+  'concentration':'集中度診斷：最大單一資產/類別敞口，如何降低集中度且不大幅損失收益。',
+  'worst-asset':'最差/最高風險資產診斷：止損觸發條件 vs 加倉攤成本決策框架。',
+  'diversify':'跨類別（L1/L2/DeFi/RWA/穩定幣）分散方案，含目標配置比例。',
+  // risk
+  'full-risk':'全面風控：VaR估算、BTC-30%/ETH-40%/DeFi黑天鵝三情景損益、對沖建議。',
+  'scenario-btc':'BTC下跌30%：每個持倉預期損益、總損失、哪些提供對沖、主要風險來源。',
+  'hedge':'成本合理對沖方案：期權/永續空頭/穩定幣配置，對沖比例+成本+效果。',
+  'kelly':'半凱利最優倉位比例：計算各主要持倉，指出當前配置偏差及調整方向。',
+  // strategy
+  'strategy-eval':'DeFi策略按Sharpe排名，識別應退出/縮倉/加注的策略，給出具體操作。',
+  'exit-signal':'每個策略的退出信號：監控指標+觸發條件+退出後資金安排。',
+  'add-strategy':'根據組合缺口推薦2-3個新策略：原理、預期APY範圍、主要風險、配置比例。',
+};
+
+// ── Streaming helper (shared by panel AI and chat AI) ──
+async function streamAI({page, msgEl, userPrompt, onDone, onErr}){
+  const apiKey=document.getElementById('apiKeyInput')?.value.trim();
+  if(activeControllers[page]){activeControllers[page].abort();delete activeControllers[page]}
+
+  readPortfolio();
+  const ctx=buildContext();
+  // Keep full prompt compact: question first, then data block
+  const fullPrompt=userPrompt+'\n\n---\n'+ctx;
+
+  // Show streaming cursor inside msgEl
+  msgEl.innerHTML='';
+  const cursor=document.createElement('span');cursor.className='cursor';
+  msgEl.appendChild(cursor);
+
+  if(!apiKey){
+    cursor.remove();
+    const hasData=portfolio.assets.length>0;
+    msgEl.innerHTML=renderMarkdown(
+      `**Demo 模式** — 請在頂部填入 Anthropic API Key 以獲得真實分析。\n\n`+
+      (hasData
+        ? `已偵測到 ${portfolio.assets.length} 個持倉（${portfolio.assets.map(a=>a.name).join('、')}），Claude 將針對這些數據回答你的問題。`
+        : `尚未填入持倉數據。請先至「輸入持倉數據」填入持倉，AI 分析將更加精準。`)
+    );
+    onDone&&onDone('');
+    return;
+  }
+
+  const controller=new AbortController();
+  activeControllers[page]=controller;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',signal:controller.signal,
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800, // token-efficient: 800 for panel, chat overrides to 1000
+        stream:true,
+        system:SYSTEM_PROMPT,
+        messages:[{role:'user',content:fullPrompt}]
+      }),
+    });
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${resp.status}`)}
+
+    const dec=new TextDecoder('utf-8');
+    const reader=resp.body.getReader();
+    let buf='',raw='';
+    try{
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop();
+        for(const line of lines){
+          if(!line.startsWith('data: ')||line==='data: [DONE]')continue;
+          try{
+            const d=JSON.parse(line.slice(6));
+            if(d.type==='content_block_delta'&&d.delta?.text){
+              raw+=d.delta.text;
+              msgEl.insertBefore(document.createTextNode(d.delta.text),cursor);
+            }
+          }catch{}
+        }
+      }
+    }finally{reader.releaseLock();delete activeControllers[page]}
+    cursor.remove();
+    msgEl.innerHTML=renderMarkdown(raw);
+    onDone&&onDone(raw);
+  }catch(err){
+    if(err.name==='AbortError')return;
+    if(cursor.parentNode)cursor.remove();
+    const errHtml=`<span style="color:var(--danger)">⚠ ${err.message}</span>`;
+    msgEl.innerHTML=errHtml;
+    onErr&&onErr(err);
+  }
+}
+
+// Panel AI (overview/portfolio/risk/strategy pages)
+async function callAI(page,promptKey,customPrompt){
+  const msgEl=document.getElementById(page+'-ai-msg');if(!msgEl)return;
+  const userPrompt=customPrompt||(PROMPT_MAP[promptKey]||PROMPT_MAP[page+'-main']||'分析當前組合並給出建議。');
+  msgEl.style.color='var(--muted)';
+  await streamAI({page,msgEl,userPrompt});
+}
+// Simple markdown renderer (bold, italic, h3, lists, blockquote)
+function renderMarkdown(text){
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^> (.+)$/gm,'<span style="color:var(--amber);display:block;padding-left:10px;border-left:2px solid var(--amber)">$1</span>')
+    .replace(/^- (.+)$/gm,'<span style="display:block;padding-left:16px">• $1</span>')
+    .replace(/^\d+\. (.+)$/gm,'<span style="display:block;padding-left:16px">$&</span>')
+    .replace(/\n/g,'<br>');
+}
+
+// ────────────────────────────────────────────────────────────
+//  AI button event delegation
+// ────────────────────────────────────────────────────────────
+document.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-ai-page][data-ai-prompt]');
+  if(!btn) return;
+  const page=btn.dataset.aiPage;
+  const pkey=btn.dataset.aiPrompt;
+  callAI(page,pkey);
+});
+
+// ────────────────────────────────────────────────────────────
+//  Overview render
+// ────────────────────────────────────────────────────────────
+function renderOverview(){
+  const p=portfolio;
+  const cur=p.currency||'USD';
+  document.getElementById('ov-desc').textContent=p.name||'—';
+
+  // metrics
+  const metricsEl=document.getElementById('ov-metrics');
+  const aum=p.aum||(p.assets.reduce((s,a)=>s+a.value,0));
+  const metrics=[
+    {lbl:'AUM',val:aum?'$'+fmtNum(aum):p.assets.length?'$'+fmtNum(p.assets.reduce((s,a)=>s+a.value,0)):'—',cls:'g',sub:cur},
+    {lbl:'Sharpe Ratio',val:p.sharpe!=null?p.sharpe.toFixed(2):'—',cls:'',sub:'風險調整收益'},
+    {lbl:'Max Drawdown',val:p.mdd!=null?p.mdd+'%':'—',cls:'a',sub:'最大回撤'},
+    {lbl:'年化收益',val:p.annual!=null?(p.annual>0?'+':'')+p.annual+'%':'—',cls:'g',sub:'年化'},
+  ];
+  metricsEl.innerHTML=metrics.map(m=>`<div class="mc"><div class="lbl">${m.lbl}</div><div class="val ${m.cls}">${m.val}</div><div class="sub">${m.sub}</div></div>`).join('');
+
+  // allocation bars
+  const allocEl=document.getElementById('ov-alloc');
+  if(!p.assets.length){allocEl.innerHTML='<div style="color:var(--hint);font-size:12px;padding:20px 0;text-align:center">請先輸入持倉數據</div>';return}
+  const totalVal=p.assets.reduce((s,a)=>s+a.value,0)||1;
+  const sorted=[...p.assets].sort((a,b)=>b.value-a.value);
+  allocEl.innerHTML=sorted.map((a,i)=>{
+    const pct=a.pct||(a.value/totalVal*100);
+    const color=ASSET_COLORS[i%ASSET_COLORS.length];
+    const val=a.value?'$'+fmtNum(a.value):'—';
+    return `<div class="alloc-row">
+      <div class="alloc-dot" style="background:${color}"></div>
+      <div class="alloc-name">${a.name}</div>
+      <div class="alloc-wrap"><div class="alloc-bar" style="width:0%;background:${color}" data-w="${pct.toFixed(1)}"></div></div>
+      <div class="alloc-pct">${pct.toFixed(1)}%</div>
+      <div class="alloc-val">${val}</div>
+    </div>`;
+  }).join('');
+  requestAnimationFrame(()=>{
+    allocEl.querySelectorAll('.alloc-bar[data-w]').forEach(b=>b.style.width=b.dataset.w+'%');
+  });
+
+  // NAV chart (illustrative)
+  destroyChart('navChart');
+  const ctx=document.getElementById('navChart');
+  if(ctx){
+    const months=['Oct','Nov','Dec','Jan','Feb','Mar'];
+    const navData=months.map((_,i)=>+(100+i*2.1+(Math.random()-.4)*3).toFixed(1));
+    navData[navData.length-1]=+(100+(p.annual||10)/12*6).toFixed(1);
+    chartInstances['navChart']=new Chart(ctx,{
+      type:'line',
+      data:{labels:months,datasets:[
+        {label:'組合 NAV',data:navData,borderColor:C.green,backgroundColor:C.gbg,tension:.4,fill:true,pointRadius:3,pointBackgroundColor:C.green},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:C.muted,font:{family:C.mono,size:11},boxWidth:10}}},
+        scales:{x:{...scaleBase},y:{...scaleBase,ticks:{...scaleBase.ticks,callback:v=>v+'%'}}}},
+    });
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+//  Portfolio render
+// ────────────────────────────────────────────────────────────
+function renderPortfolio(){
+  const p=portfolio;
+  destroyChart('pieChart');
+  destroyChart('pnlChart');
+
+  if(!p.assets.length){
+    document.getElementById('heatmap').innerHTML='<div style="color:var(--hint);font-size:12px;padding:20px;text-align:center">請先輸入持倉數據</div>';
+    return;
+  }
+
+  // Pie
+  const pieCtx=document.getElementById('pieChart');
+  if(pieCtx){
+    const totalV=p.assets.reduce((s,a)=>s+a.value,0)||1;
+    chartInstances['pieChart']=new Chart(pieCtx,{
+      type:'doughnut',
+      data:{labels:p.assets.map(a=>a.name),
+        datasets:[{data:p.assets.map(a=>a.value||a.pct||0),
+          backgroundColor:p.assets.map((_,i)=>ASSET_COLORS[i%ASSET_COLORS.length]),
+          borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+        plugins:{legend:{position:'right',labels:{color:C.muted,font:{family:C.mono,size:11},boxWidth:8,padding:8}}}},
+    });
+  }
+
+  // PnL bar
+  const pnlCtx=document.getElementById('pnlChart');
+  if(pnlCtx){
+    const vals=p.assets.map(a=>a.change24h||0);
+    chartInstances['pnlChart']=new Chart(pnlCtx,{
+      type:'bar',
+      data:{labels:p.assets.map(a=>a.name),
+        datasets:[{data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(0,212,160,.65)':'rgba(255,77,79,.65)'),borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{...scaleBase},y:{...scaleBase,ticks:{...scaleBase.ticks,callback:v=>v+'%'}}}},
+    });
+  }
+
+  // Heatmap (auto-build from assets)
+  const hmEl=document.getElementById('heatmap');
+  const names=p.assets.map(a=>a.name).slice(0,6);
+  if(names.length<2){hmEl.innerHTML='<div style="color:var(--hint);font-size:12px;padding:10px">需要至少 2 個資產才能生成相關性矩陣</div>';return}
+  // Simple assumed correlation matrix based on asset categories
+  const catCorr=(a,b)=>{
+    const la=a.category,lb=b.category;
+    if(a.name===b.name) return 1;
+    if((la==='L1'||la==='L2')&&(lb==='L1'||lb==='L2')) return .75;
+    if((la==='L1'||la==='L2')&&lb==='DeFi') return .65;
+    if(la==='DeFi'&&lb==='DeFi') return .6;
+    if(la==='RWA'||lb==='RWA') return .08;
+    if(la==='Stablecoin'||lb==='Stablecoin') return -.02;
+    return .4;
+  };
+  const assets6=p.assets.slice(0,6);
+  hmEl.style.cssText=`display:grid;grid-template-columns:70px repeat(${assets6.length},1fr);gap:2px;font-size:10px;font-family:${C.mono}`;
+  let html='<div></div>'+assets6.map(a=>`<div style="text-align:center;color:${C.hint};padding:3px 0;font-size:10px">${a.name}</div>`).join('');
+  assets6.forEach((a,i)=>{
+    html+=`<div style="color:${C.hint};padding:3px 4px;display:flex;align-items:center;font-size:10px">${a.name}</div>`;
+    assets6.forEach((b,j)=>{
+      const v=i===j?1:+(catCorr(a,b)+(Math.random()-.5)*.1).toFixed(2);
+      const alpha=Math.abs(v)*.75;
+      const bg=v>0?`rgba(0,212,160,${alpha})`:`rgba(255,77,79,${alpha})`;
+      const tc=Math.abs(v)>.45?'#000':C.muted;
+      html+=`<div class="heatmap-cell" style="background:${bg};color:${tc}">${v.toFixed(2)}</div>`;
+    });
+  });
+  hmEl.innerHTML=html;
+}
+
+// ────────────────────────────────────────────────────────────
+//  Risk render
+// ────────────────────────────────────────────────────────────
+function renderRisk(){
+  const p=portfolio;
+  // compute simple risk score
+  const riskMap={very_low:5,low:15,medium:40,high:75};
+  let score=42; // default
+  if(p.assets.length){
+    const totalV=p.assets.reduce((s,a)=>s+a.value,0)||1;
+    score=Math.round(p.assets.reduce((s,a)=>s+(riskMap[a.risk]||40)*(a.value/totalV),0));
+    // adjust by mdd
+    if(p.mdd&&p.mdd<-20) score=Math.min(100,score+15);
+    if(p.vol&&p.vol>25) score=Math.min(100,score+10);
+  }
+  const aum=p.aum||p.assets.reduce((s,a)=>s+a.value,0)||0;
+
+  // metrics
+  const rmEl=document.getElementById('risk-metrics');
+  const var95=p.var95?p.var95+'%':(aum?'-'+((aum*0.01)/1000).toFixed(0)+'K':'—');
+  const metrics=[
+    {lbl:'VaR 95% 1日',val:p.var95?p.var95+'%':'~'+Math.round(score*.06)+'K',cls:'a',sub:'極端損失估算'},
+    {lbl:'Max Drawdown',val:p.mdd!=null?p.mdd+'%':'—',cls:'r',sub:'歷史最大'},
+    {lbl:'Beta vs BTC',val:p.beta!=null?p.beta.toFixed(2):'—',cls:'',sub:'市場相關性'},
+    {lbl:'年化波動率',val:p.vol!=null?p.vol+'%':'—',cls:'a',sub:'30日'},
+  ];
+  rmEl.innerHTML=metrics.map(m=>`<div class="mc"><div class="lbl">${m.lbl}</div><div class="val ${m.cls}">${m.val}</div><div class="sub">${m.sub}</div></div>`).join('');
+
+  // gauge
+  drawGauge(score);
+  document.getElementById('risk-score-val').textContent=score;
+  const lbl=score<35?'低風險':score<65?'中等風險':'高風險';
+  document.getElementById('risk-score-lbl').textContent=lbl+' / 100';
+
+  // risk factors
+  const rfEl=document.getElementById('risk-factors');
+  const factors=[
+    {name:'流動性風險',val:p.assets.filter(a=>a.category==='Stablecoin'||a.category==='DeFi').length>0?'低':'中'},
+    {name:'集中度風險',val:p.assets.length&&Math.max(...p.assets.map(a=>a.pct||0))>35?'高':'中'},
+    {name:'加密資產敞口',val:p.assets.filter(a=>a.category==='L1'||a.category==='L2').reduce((s,a)=>s+(a.pct||0),0)>60?'高':'中'},
+    {name:'智能合約風險',val:p.strategies.length>0?'中':'低'},
+  ];
+  const badgeCls={低:'bg',中:'ba',高:'br'};
+  rfEl.innerHTML=factors.map(f=>`<div class="sig-row"><span class="sig-name">${f.name}</span><span class="badge ${badgeCls[f.val]||'ba'}">${f.val}</span></div>`).join('');
+
+  // scenario chart
+  destroyChart('scenarioChart');
+  const scCtx=document.getElementById('scenarioChart');
+  if(scCtx){
+    const totalV=aum||p.assets.reduce((s,a)=>s+a.value,0)||1;
+    const cryptoPct=p.assets.filter(a=>['L1','L2'].includes(a.category)).reduce((s,a)=>s+(a.pct||a.value/totalV*100),0)/100;
+    const defiPct=p.assets.filter(a=>a.category==='DeFi').reduce((s,a)=>s+(a.pct||a.value/totalV*100),0)/100;
+    const vals=[
+      -Math.round(totalV*(cryptoPct*0.35+defiPct*0.15)/1000),
+      -Math.round(totalV*(cryptoPct*0.45+defiPct*0.2)/1000),
+      -Math.round(totalV*defiPct*0.4/1000),
+      -Math.round(totalV*.03/1000),
+      Math.round(totalV*(cryptoPct*0.5)/1000),
+    ];
+    chartInstances['scenarioChart']=new Chart(scCtx,{
+      type:'bar',
+      data:{labels:['BTC -30%','ETH -40%','DeFi Hack','Stable Depeg','Bull +50%'],
+        datasets:[{data:vals,backgroundColor:vals.map(v=>v>=0?'rgba(0,212,160,.65)':'rgba(255,77,79,.65)'),borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{x:{...scaleBase},y:{...scaleBase,ticks:{...scaleBase.ticks,callback:v=>'$'+(v>=0?'+':'')+v+'K'}}}},
+    });
+  }
+}
+
+function drawGauge(score){
+  const canvas=document.getElementById('riskGauge'); if(!canvas) return;
+  score=Math.max(0,Math.min(100,score));
+  const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+  const cx=W/2,cy=H-16,r=Math.min(cx,cy)-8;
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,2*Math.PI,false);
+  ctx.strokeStyle='#1a2535';ctx.lineWidth=16;ctx.lineCap='round';ctx.stroke();
+  const end=Math.PI+(score/100)*Math.PI;
+  const color=score<35?C.green:score<65?C.amber:C.red;
+  ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,end,false);
+  ctx.strokeStyle=color;ctx.lineWidth=16;ctx.lineCap='round';ctx.stroke();
+  document.getElementById('risk-score-val').style.color=color;
+}
+
+// ────────────────────────────────────────────────────────────
+//  Strategy render
+// ────────────────────────────────────────────────────────────
+function renderStrategy(){
+  const p=portfolio;
+  const container=document.getElementById('strat-cards-display');
+  const noMsg=document.getElementById('no-strat-msg');
+  if(!p.strategies.length){container.innerHTML='';noMsg.style.display='block';return}
+  noMsg.style.display='none';
+  const colors=[C.blue,C.purple,C.green,C.amber,C.red];
+  container.innerHTML=p.strategies.map((s,i)=>`
+    <div class="strat-card" tabindex="0" role="button"
+         data-ai-page="strategy"
+         data-ai-prompt="strategy-eval"
+         aria-label="${s.name} - 點擊獲取 AI 分析">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div><div class="strat-name">${s.name}</div><div class="strat-type">${s.type}</div></div>
+        <span class="badge ${s.status==='active'?'bg':s.status==='watch'?'ba':'br'}">${{active:'運行中',watch:'監控中',paused:'暫停'}[s.status]||s.status}</span>
+      </div>
+      <div class="strat-apy" style="color:${colors[i%colors.length]}">${s.apy?s.apy+'%':'—'}</div>
+      <div class="strat-apy-lbl">APY</div>
+      ${s.tvl?`<div class="strat-row"><span>TVL</span><span>$${fmtNum(s.tvl)}</span></div>`:''}
+      ${s.sharpe!=null?`<div class="strat-row"><span>Sharpe</span><span>${s.sharpe}</span></div>`:''}
+      ${s.maxdd!=null?`<div class="strat-row"><span>Max DD</span><span style="color:${C.red}">${s.maxdd}%</span></div>`:''}
+    </div>`).join('');
+  container.querySelectorAll('.strat-card').forEach(card=>{
+    card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();card.click()}});
+  });
+}
+
+// ────────────────────────────────────────────────────────────
+//  Chat — multi-turn conversation with bubble UI
+// ────────────────────────────────────────────────────────────
+
+// Chip definitions: {label, q, style}
+// q is the exact user question sent to Claude (concise)
+const CHIP_GROUPS=[
+  {label:'組合診斷', chips:[
+    {label:'整體健康評分',     q:'用A-F評分評估我的組合健康度，各維度（收益、風險、分散性、流動性）各幾分？'},
+    {label:'再平衡建議',       q:'給出立即可執行的再平衡操作：減持哪些、加多少、加倉哪些、預期效果。'},
+    {label:'最弱持倉',         q:'指出組合中風報比最差的持倉，止損 vs 加倉的決策框架是什麼？'},
+    {label:'月報草稿',         q:'生成一份200字的月度組合報告，適合發給投資人。'},
+  ]},
+  {label:'風險分析', style:'risk', chips:[
+    {label:'BTC -30% 情景',    q:'BTC下跌30%時，逐一列出每個持倉的預期損益和總組合損失。'},
+    {label:'ETH -40% 情景',    q:'ETH下跌40%時，組合各倉位損益和總損失，哪些資產有保護效果？'},
+    {label:'DeFi 黑天鵝',      q:'主要DeFi協議遭攻擊或暴雷，最壞情景下組合損失多少？如何提前防禦？'},
+    {label:'對沖方案',         q:'設計一個對沖方案：工具選擇（期權/永續空頭/穩定幣）、比例、成本、預期效果。'},
+    {label:'凱利倉位',         q:'用半凱利公式計算每個主要持倉的最優比例，與現狀偏差多少？'},
+  ]},
+  {label:'策略優化', style:'strategy', chips:[
+    {label:'策略Sharpe排名',   q:'按Sharpe排名所有DeFi策略，哪個應退出、哪個值得加注？'},
+    {label:'退出信號',         q:'每個策略的退出觸發條件是什麼？現在有哪些已接近閾值？'},
+    {label:'新策略推薦',       q:'根據組合現有缺口，推薦2-3個互補的DeFi策略，含APY預期和風險。'},
+    {label:'資金費率分析',     q:'當前資金費率環境下，資金費率套利策略的盈虧臨界點在哪裡？'},
+  ]},
+  {label:'市場情境', style:'market', chips:[
+    {label:'現在適合入場嗎？', q:'結合Fear&Greed、資金費率、鏈上數據，現在是加倉還是減倉的時機？'},
+    {label:'BTC vs 山寨幣',    q:'目前BTC主導地位下，持山寨幣（L2/DeFi）vs加倉BTC哪個更合理？'},
+    {label:'加密 vs RWA',      q:'在當前市場環境下，加密資產敞口 vs RWA配置如何平衡最優？'},
+    {label:'流動性危機預警',   q:'評估組合在流動性危機下（如2022年）的表現，哪些倉位最脆弱？'},
+    {label:'監管風險',         q:'香港SFC最新監管框架下，組合中哪些持倉存在合規風險？如何調整？'},
+  ]},
+  {label:'數字計算', chips:[
+    {label:'預期收益試算',     q:'按當前配置計算6個月預期收益範圍（樂觀/中性/悲觀三情景）。'},
+    {label:'再平衡成本',       q:'如果執行再平衡，交易成本和滑點大概多少？是否值得？'},
+    {label:'夏普優化',         q:'如何調整配置讓Sharpe提升0.3以上？需要做哪些具體改動？'},
+    {label:'最大回撤優化',     q:'如何在不大幅犧牲收益的前提下，將Max DD從現在水平降低30%？'},
+  ]},
+];
+
+// Build chip UI
+function initChips(){
+  const el=document.getElementById('chip-groups');if(!el)return;
+  el.innerHTML=CHIP_GROUPS.map(g=>`
+    <div>
+      <div class="chip-group-label">${g.label}</div>
+      <div class="chips">
+        ${g.chips.map(c=>`<button class="chip${g.style?' chip-'+g.style:''}" onclick="sendChat(${JSON.stringify(c.q)},${JSON.stringify(c.label)})">${c.label}</button>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// Chat state
+let chatHistory=[];
+
+function sendChat(q, label){
+  const textarea=document.getElementById('chat-textarea');
+  if(!q){q=(textarea?.value||'').trim();if(!q)return;}
+  if(textarea) textarea.value='';
+  updateCharCount();
+  appendChatTurn(label||q, q);
+}
+
+function appendChatTurn(displayQ, rawQ){
+  const hist=document.getElementById('chat-history');if(!hist)return;
+  const turn=document.createElement('div');
+  turn.className='chat-turn';
+
+  // Question bubble
+  const qBubble=document.createElement('div');
+  qBubble.className='chat-q';
+  qBubble.textContent=displayQ;
+  turn.appendChild(qBubble);
+
+  // Loading answer bubble
+  const aBubble=document.createElement('div');
+  aBubble.className='chat-a';
+  const msgEl=document.createElement('div');
+  msgEl.className='ai-msg';
+  aBubble.appendChild(msgEl);
+  turn.appendChild(aBubble);
+
+  // Meta (time + token est)
+  const meta=document.createElement('div');
+  meta.className='chat-meta';
+  const t0=Date.now();
+  aBubble.appendChild(meta);
+
+  hist.appendChild(turn);
+  hist.scrollTop=hist.scrollHeight;
+
+  streamAI({
+    page:'chat',
+    msgEl,
+    userPrompt:rawQ,
+    onDone:(raw)=>{
+      const elapsed=((Date.now()-t0)/1000).toFixed(1);
+      const toks=Math.round(raw.length/3.5);
+      meta.textContent=`${new Date().toLocaleTimeString('zh-HK',{hour12:false})} · ~${toks} tokens · ${elapsed}s`;
+      // store in history for context (last 6 turns)
+      chatHistory.push({role:'user',content:rawQ},{role:'assistant',content:raw});
+      if(chatHistory.length>12) chatHistory=chatHistory.slice(-12);
+    },
+    onErr:()=>{meta.textContent='發生錯誤'}
+  });
+}
+
+document.getElementById('btn-chat-send')?.addEventListener('click',()=>sendChat());
+document.getElementById('btn-clear-chat')?.addEventListener('click',()=>{
+  document.getElementById('chat-history').innerHTML='';
+  chatHistory=[];
+});
+document.getElementById('chat-textarea')?.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.ctrlKey){e.preventDefault();sendChat()}
+});
+// char counter
+function updateCharCount(){
+  const ta=document.getElementById('chat-textarea');if(!ta)return;
+  const n=ta.value.length;
+  const el=document.getElementById('chat-char-count');
+  if(el)el.textContent=n>0?n+' 字':'0 字';
+  const te=document.getElementById('chat-token-est');
+  if(te) te.textContent=n>10?'≈ '+(Math.round(n/3.5)+200)+' tokens (含持倉上下文)':'';
+}
+document.getElementById('chat-textarea')?.addEventListener('input',updateCharCount);
+// also wire the old chat-input id alias
+function setQuestion(q){const t=document.getElementById('chat-textarea');if(t){t.value=q;updateCharCount()}}
+
+// ────────────────────────────────────────────────────────────
+//  Save & load
+// ────────────────────────────────────────────────────────────
+document.getElementById('btn-save-portfolio')?.addEventListener('click',()=>{
+  readPortfolio();
+  if(!portfolio.assets.length&&!portfolio.aum){
+    showToast('請先填入至少一項持倉數據',true); return;
+  }
+  showToast('持倉已儲存！正在導航至組合總覽…');
+  setTimeout(()=>{
+    document.querySelector('.nav-it[data-page="overview"]')?.click();
+  },800);
+});
+
+// currency unit sync
+document.getElementById('p-currency')?.addEventListener('change',e=>{
+  document.getElementById('p-aum-unit').textContent=e.target.value;
+});
+
+// delete asset/strat row
+document.addEventListener('click',e=>{
+  const d=e.target.closest('[data-del-rid]');
+  if(d){d.closest('tr')?.remove();return}
+  const s=e.target.closest('[data-del-srid]');
+  if(s) s.closest('tr')?.remove();
+});
+
+document.getElementById('add-asset-btn')?.addEventListener('click',()=>addAssetRow());
+document.getElementById('add-strat-btn')?.addEventListener('click',()=>addStratRow());
+
+// load sample data
+document.getElementById('btn-load-sample')?.addEventListener('click',()=>{
+  document.getElementById('p-name').value='My VaultMind Portfolio';
+  document.getElementById('p-currency').value='USD';
+  document.getElementById('p-currency').dispatchEvent(new Event('change'));
+  document.getElementById('p-aum').value='4210000';
+  document.getElementById('p-horizon').value='mid';
+  document.getElementById('p-risk-pref').value='moderate';
+  document.getElementById('p-goal').value='主要目標是跑贏 BTC 基準，同時控制最大回撤在 15% 以內。對 RWA 代幣化債券和 DeFi 收益有興趣，符合香港 SFC 監管要求。';
+  document.getElementById('p-sharpe').value='1.84';
+  document.getElementById('p-mdd').value='-8.2';
+  document.getElementById('p-annual').value='34.7';
+  document.getElementById('p-beta').value='0.62';
+  document.getElementById('p-var').value='-1.0';
+  document.getElementById('p-vol').value='18.4';
+  document.getElementById('m-btc').value='68000';
+  document.getElementById('m-eth').value='2840';
+  document.getElementById('m-fg').value='62';
+  document.getElementById('m-funding').value='0.031';
+
+  document.getElementById('asset-tbody').innerHTML='';
+  assetRowId=0;
+  const sampleAssets=[
+    {name:'ETH',category:'L1',qty:420.5,price:2840,value:1193220,pct:28.3,pnl:84000,change24h:2.1,risk:'medium'},
+    {name:'RWA Bond',category:'RWA',qty:1100,price:1009,value:1109900,pct:26.4,pnl:9000,change24h:0.1,risk:'low'},
+    {name:'BTC',category:'L1',qty:12.8,price:68000,value:870400,pct:20.7,pnl:51000,change24h:1.4,risk:'medium'},
+    {name:'USDC LP',category:'DeFi',qty:540000,price:1,value:540000,pct:12.8,pnl:18000,change24h:0,risk:'low'},
+    {name:'Stable LP',category:'DeFi',qty:380000,price:1,value:380000,pct:9.0,pnl:4000,change24h:0,risk:'very_low'},
+    {name:'ARB',category:'L2',qty:185000,price:1.24,value:229400,pct:5.4,pnl:-12000,change24h:-3.2,risk:'high'},
+  ];
+  sampleAssets.forEach(a=>addAssetRow(a));
+
+  document.getElementById('strat-tbody').innerHTML='';
+  stratRowId=0;
+  const sampleStrats=[
+    {name:'ETH Basis Trade',type:'Delta Neutral',tvl:820000,apy:18.4,sharpe:2.1,maxdd:-3.2,status:'active'},
+    {name:'AAVE v3 Loop',type:'借貸套利',tvl:540000,apy:12.1,sharpe:1.8,maxdd:-2.1,status:'active'},
+    {name:'RWA Bond Yield',type:'代幣化債券',tvl:1100000,apy:6.8,sharpe:3.2,maxdd:-0.8,status:'active'},
+    {name:'BTC Perp Funding',type:'資金費率',tvl:290000,apy:22.7,sharpe:1.2,maxdd:-6.8,status:'watch'},
+  ];
+  sampleStrats.forEach(s=>addStratRow(s));
+  showToast('範例數據已載入！');
+});
+
+// ────────────────────────────────────────────────────────────
+//  Helpers
+// ────────────────────────────────────────────────────────────
+function fmtNum(n){
+  if(!n) return '0';
+  if(n>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(n>=1e3) return (n/1e3).toFixed(1)+'K';
+  return n.toLocaleString();
+}
+
+function showToast(msg,err=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.style.background=err?'var(--danger)':'var(--accent)';
+  t.style.color=err?'#fff':'#000';
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ────────────────────────────────────────────────────────────
+//  Railway API client + live data
+// ────────────────────────────────────────────────────────────
+let liveData = { portfolio:null, signals:null, sentiment:null };
+let liveRefreshTimer = null;
+
+function getRailwayUrl(){
+  const v=(document.getElementById('railwayUrlInput')?.value||'').trim().replace(/\/+$/,'');
+  return v||null;
+}
+
+function setApiStatus(ok, label){
+  const dot=document.getElementById('api-dot');
+  const txt=document.getElementById('api-status');
+  if(dot) dot.style.background=ok?'var(--accent)':ok===null?'var(--amber)':'var(--hint)';
+  if(txt) txt.textContent=label||'';
+}
+
+async function fetchLiveData(silent=false){
+  const base=getRailwayUrl();
+  if(!base){
+    setApiStatus(false,'離線');
+    document.getElementById('live-no-conn').style.display='block';
+    document.getElementById('live-content').style.display='none';
+    document.getElementById('live-ai-panel').style.display='none';
+    return;
+  }
+  setApiStatus(null,'連接中…');
+  try{
+    const res=await fetch(base+'/api/all',{signal:AbortSignal.timeout(8000)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    liveData=data;
+    setApiStatus(true,'即時');
+    document.getElementById('live-no-conn').style.display='none';
+    document.getElementById('live-content').style.display='block';
+    document.getElementById('live-ai-panel').style.display='block';
+    renderLivePage(data);
+    const ts=new Date().toLocaleTimeString('zh-HK',{hour12:false});
+    const el=document.getElementById('live-last-update');
+    if(el) el.textContent='最後更新 '+ts;
+    if(!silent) showToast('數據已更新');
+  }catch(e){
+    setApiStatus(false,'連接失敗');
+    if(!silent) showToast('無法連接 Railway：'+e.message, true);
+  }
+}
+
+function renderLivePage(data){
+  const {portfolio,signals,sentiment}=data;
+
+  // ── Metrics strip ──
+  const mEl=document.getElementById('live-metrics');
+  const fg=sentiment?.fear_greed?.value;
+  const fgLabel=fg>=75?'極度貪婪':fg>=55?'貪婪':fg>=45?'中性':fg>=25?'恐懼':'極度恐懼';
+  const fgCls=fg>=75?'r':fg>=55?'a':fg>=45?'':'g';
+  const fr=sentiment?.derivatives?.btc_funding_rate_pct;
+  const whaleFlow=sentiment?.onchain?.whale_net_flow_usd;
+  const alerts=signals?.alerts||[];
+  const highRisk=alerts.filter(a=>a.risk==='high').length;
+  mEl.innerHTML=[
+    {lbl:'Fear & Greed',val:fg!=null?fg+' '+fgLabel:'—',cls:fgCls,sub:'市場情緒'},
+    {lbl:'BTC 資金費率',val:fr!=null?'+'+fr+'%':'—',cls:fr>0.06?'r':fr>0.03?'a':'g',sub:'每 8 小時'},
+    {lbl:'Whale 淨流入',val:whaleFlow!=null?'$'+(whaleFlow/1e6).toFixed(1)+'M':'—',cls:whaleFlow>0?'g':'r',sub:'鏈上 24h'},
+    {lbl:'高風險警報',val:highRisk,cls:highRisk>0?'r':'g',sub:'24h 大額轉移'},
+  ].map(m=>`<div class="mc"><div class="lbl">${m.lbl}</div><div class="val ${m.cls}">${m.val}</div><div class="sub">${m.sub}</div></div>`).join('');
+
+  // update badge
+  const badge=document.getElementById('alert-badge');
+  if(badge){
+    if(highRisk>0){badge.textContent=highRisk;badge.style.display=''}
+    else badge.style.display='none';
+  }
+
+  // ── Onchain alerts ──
+  const aEl=document.getElementById('live-alerts');
+  const cntEl=document.getElementById('live-alert-count');
+  if(cntEl) cntEl.textContent=alerts.length+' 筆';
+  const riskColor={high:'danger',medium:'amber',low:'accent'};
+  aEl.innerHTML=alerts.slice(0,6).map(a=>{
+    const c=riskColor[a.risk]||'accent';
+    return `<div class="alert-item">
+      <div class="alert-icon" style="background:var(--${c}-dim||var(--adim))">
+        <span style="color:var(--${c==='danger'?'danger':c==='amber'?'amber':'accent'});font-size:14px;font-weight:700">!</span>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px">
+          <span style="font-size:12px;font-weight:500">${a.asset} $${(a.amount_usd/1e6).toFixed(2)}M</span>
+          <span class="badge ${a.risk==='high'?'br':a.risk==='medium'?'ba':'bg'}">${a.direction}</span>
+        </div>
+        <div class="alert-detail">${a.detail}</div>
+        <div class="alert-time">${a.time} HKT · ${a.tx_hash||''}</div>
+      </div>
+    </div>`;
+  }).join('')||'<div style="color:var(--hint);font-size:12px;padding:10px 0">暫無警報</div>';
+
+  // ── Sentiment signals ──
+  const sEl=document.getElementById('live-sentiment-signals');
+  const od=sentiment?.onchain||{};
+  const dd=sentiment?.derivatives||{};
+  const sigRows=[
+    {name:'Whale 淨流向',val:od.whale_net_flow_label==='inflow'?'↑ 淨流入':'↓ 淨流出',c:od.whale_net_flow_label==='inflow'?C.green:C.red},
+    {name:'交易所 BTC 存量',val:od.exchange_btc_reserve_change_pct!=null?(od.exchange_btc_reserve_change_pct>0?'+':'')+od.exchange_btc_reserve_change_pct+'%':'—',c:od.exchange_btc_reserve_change_pct<0?C.green:C.red},
+    {name:'MVRV Z-Score',val:od.mvrv_z_score!=null?od.mvrv_z_score:'—',c:od.mvrv_z_score>3?C.red:od.mvrv_z_score>1.5?C.amber:C.green},
+    {name:'NVT Ratio',val:od.nvt_ratio!=null?od.nvt_ratio:'—',c:od.nvt_ratio>80?C.red:od.nvt_ratio>60?C.amber:C.green},
+    {name:'BTC OI 7日',val:dd.btc_open_interest_7d_change_pct!=null?(dd.btc_open_interest_7d_change_pct>0?'+':'')+dd.btc_open_interest_7d_change_pct+'%':'—',c:Math.abs(dd.btc_open_interest_7d_change_pct||0)>10?C.red:C.amber},
+    {name:'ETH/BTC 比值',val:dd.eth_btc_ratio!=null?dd.eth_btc_ratio:'—',c:C.muted},
+  ];
+  sEl.innerHTML=sigRows.map(s=>`<div class="sig-row"><span class="sig-name">${s.name}</span><span style="color:${s.c};font-size:12px;font-weight:500">${s.val}</span></div>`).join('');
+
+  // ── Stable flow chart ──
+  destroyChart('liveFlowChart');
+  const flowCtx=document.getElementById('liveFlowChart');
+  const flowData=signals?.stable_flow_7d||[];
+  if(flowCtx&&flowData.length){
+    chartInstances['liveFlowChart']=new Chart(flowCtx,{
+      type:'bar',
+      data:{
+        labels:flowData.map(d=>d.date.slice(5)),
+        datasets:[
+          {label:'USDC 鑄造',data:flowData.map(d=>d.usdc_mint_m||0),backgroundColor:'rgba(77,166,255,.6)',stack:'a'},
+          {label:'USDT 贖回',data:flowData.map(d=>d.usdt_redeem_m||0),backgroundColor:'rgba(255,77,79,.5)',stack:'b'},
+          {label:'HKD Stable',data:flowData.map(d=>d.hkd_stable_mint_m||0),backgroundColor:'rgba(0,212,160,.7)',stack:'a'},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:C.muted,font:{family:C.mono,size:11},boxWidth:10}}},
+        scales:{
+          x:{...scaleBase},
+          y:{...scaleBase,ticks:{...scaleBase.ticks,callback:v=>v+'M'}},
+        }
+      },
+    });
+  }
+
+  // ── Protocol TVL ──
+  const tvlEl=document.getElementById('live-tvl');
+  const protocols=signals?.protocols||[];
+  tvlEl.innerHTML=protocols.map((p,i)=>{
+    const maxTvl=Math.max(...protocols.map(x=>x.tvl_usd));
+    const pct=Math.round(p.tvl_usd/maxTvl*100);
+    const color=ASSET_COLORS[i%ASSET_COLORS.length];
+    const chg=p.tvl_change_24h_pct;
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:500;width:96px;color:var(--text)">${p.name}</div>
+      <div style="flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);width:60px;text-align:right">$${(p.tvl_usd/1e9).toFixed(1)}B</div>
+      <div style="font-size:11px;width:50px;text-align:right;color:${chg>=0?C.green:C.red}">${chg>=0?'+':''}${chg}%</div>
+    </div>`;
+  }).join('');
+
+  // Inject live data into AI context for live page questions
+  portfolio._liveSignals=signals;
+  portfolio._liveSentiment=sentiment;
+}
+
+// Auto-refresh every 2 minutes when live page is active
+function startLiveRefresh(){
+  stopLiveRefresh();
+  fetchLiveData(true);
+  liveRefreshTimer=setInterval(()=>fetchLiveData(true),120_000);
+}
+function stopLiveRefresh(){
+  if(liveRefreshTimer){clearInterval(liveRefreshTimer);liveRefreshTimer=null;}
+}
+
+// Refresh button
+document.getElementById('btn-live-refresh')?.addEventListener('click',()=>fetchLiveData());
+
+// Railway URL change → immediate refresh
+document.getElementById('railwayUrlInput')?.addEventListener('change',()=>{
+  if(document.getElementById('page-live')?.classList.contains('active')) fetchLiveData();
+  else fetchLiveData(true); // background check
+});
+
+// ── Telegram push via /api/chat ──
+// When Railway URL is set: route AI call through server (which pushes to TG after stream)
+// When no Railway URL: call Anthropic directly from browser (no TG push)
+async function callAIWithOptionalTg(page, promptKey, customPrompt){
+  const base=getRailwayUrl();
+  const msgEl=document.getElementById(page+'-ai-msg');
+  if(!msgEl) return;
+  if(!base){
+    // No Railway — normal client-side call
+    return callAI(page, promptKey, customPrompt);
+  }
+  // Route through Railway /api/chat — server streams back AND pushes to Telegram
+  const apiKey=document.getElementById('apiKeyInput')?.value.trim();
+  if(!apiKey){showToast('請先填入 Anthropic API Key',true);return;}
+
+  if(activeControllers[page]){activeControllers[page].abort();delete activeControllers[page]}
+  readPortfolio();
+  const ctx=buildContext();
+  const userPrompt=customPrompt||(PROMPT_MAP[promptKey]||PROMPT_MAP[page+'-main']||'分析當前組合並給出建議。');
+
+  msgEl.innerHTML='';
+  const cursor=document.createElement('span');cursor.className='cursor';
+  msgEl.appendChild(cursor);
+
+  const controller=new AbortController();
+  activeControllers[page]=controller;
+
+  try{
+    const resp=await fetch(base+'/api/chat',{
+      method:'POST',signal:controller.signal,
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        page,
+        systemPrompt:SYSTEM_PROMPT,
+        userPrompt:userPrompt+'\n\n---\n'+ctx,
+        maxTokens:800,
+      }),
+    });
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const dec=new TextDecoder('utf-8');
+    const reader=resp.body.getReader();
+    let buf='',raw='';
+    try{
+      while(true){
+        const{done,value}=await reader.read();if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop();
+        for(const line of lines){
+          if(!line.startsWith('data: ')||line==='data: [DONE]')continue;
+          try{
+            const d=JSON.parse(line.slice(6));
+            if(d.type==='content_block_delta'&&d.delta?.text){
+              raw+=d.delta.text;
+              msgEl.insertBefore(document.createTextNode(d.delta.text),cursor);
+            }
+            if(d.type==='error') throw new Error(d.message);
+          }catch(pe){if(pe.message&&!pe.message.includes('JSON'))throw pe;}
+        }
+      }
+    }finally{reader.releaseLock();delete activeControllers[page]}
+    cursor.remove();
+    msgEl.innerHTML=renderMarkdown(raw);
+    showToast('✈ 已推送到 Telegram');
+  }catch(err){
+    if(err.name==='AbortError')return;
+    if(cursor.parentNode)cursor.remove();
+    msgEl.innerHTML=`<span style="color:var(--danger)">⚠ ${err.message}</span>`;
+    showToast('錯誤：'+err.message, true);
+  }
+}
+
+// Wire live page AI buttons to use TG-enabled path
+document.getElementById('btn-live-tg')?.addEventListener('click',()=>{
+  const msgEl=document.getElementById('live-ai-msg');
+  const hasContent=msgEl&&msgEl.textContent.trim()&&!msgEl.textContent.includes('點擊');
+  if(!hasContent){showToast('請先執行 AI 分析',true);return;}
+  showToast('正在重新分析並推送…');
+  callAIWithOptionalTg('live','live-interpret');
+});
+
+// ── Add live prompts to PROMPT_MAP ──
+Object.assign(PROMPT_MAP,{
+  'live-interpret':'根據最新鏈上數據和情緒指標，分析當前市場結構，對持倉有何影響，給出今日操作方向。',
+  'live-whale':'解讀最新 Whale 大額轉移和鏈上補倉行為，判斷機構資金方向，對我的持倉有何啟示？',
+  'live-sentiment':'基於 Fear&Greed、資金費率、MVRV、NVT 等指標，判斷當前市場週期位置，未來 2 週倉位如何管理？',
+  'live-action':'綜合今日所有鏈上信號和情緒指標，給出 3 條具體的今日操作建議（含資產名稱和倉位比例）。',
+});
+
+// Override buildContext to include live data when on live page
+const _origBuildContext=buildContext;
+function buildContextWithLive(){
+  let ctx=_origBuildContext();
+  const s=liveData.signals; const sen=liveData.sentiment;
+  if(s){
+    ctx+=`
+
+【即時鏈上信號】
+`;
+    (s.alerts||[]).slice(0,4).forEach(a=>{
+      ctx+=`- ${a.asset} $${(a.amount_usd/1e6).toFixed(1)}M ${a.direction}（${a.risk}）: ${a.detail}
+`;
+    });
+  }
+  if(sen){
+    const od=sen.onchain||{},dd=sen.derivatives||{};
+    ctx+=`
+【即時情緒數據】`;
+    if(sen.fear_greed?.value!=null) ctx+=` F&G=${sen.fear_greed.value}`;
+    if(dd.btc_funding_rate_pct!=null) ctx+=` 資金費率=${dd.btc_funding_rate_pct}%`;
+    if(od.mvrv_z_score!=null) ctx+=` MVRV=${od.mvrv_z_score}`;
+    if(od.whale_net_flow_usd!=null) ctx+=` Whale=${od.whale_net_flow_usd>0?'+':''}$${(od.whale_net_flow_usd/1e6).toFixed(1)}M`;
+  }
+  return ctx;
+}
+// Monkey-patch: if live page active, use enriched context
+const _origStreamAI=streamAI;
+async function streamAI(opts){
+  const activePage=document.querySelector('.nav-it.active')?.dataset?.page;
+  if(activePage==='live'&&(liveData.signals||liveData.sentiment)){
+    // Temporarily override buildContext
+    const saved=window.buildContext;
+    window.buildContext=buildContextWithLive;
+    const result=await _origStreamAI(opts);
+    window.buildContext=saved;
+    return result;
+  }
+  return _origStreamAI(opts);
+}
+
+// ────────────────────────────────────────────────────────────
+//  Init
+// ────────────────────────────────────────────────────────────
+initNav();
+initChips();
+addAssetRow(); // default empty row
+
+document.getElementById('btn-ov-ai')?.addEventListener('click',()=>{
+  readPortfolio(); callAI('overview','overview-main');
+});
+
+// details arrow rotate
+document.getElementById('advanced-section')?.addEventListener('toggle',function(){
+  const arrow=this.querySelector('.adv-arrow');
+  if(arrow) arrow.style.transform=this.open?'rotate(180deg)':'rotate(0deg)';
+});
+
+// Wire live page enter/exit
+// live page enter/exit hook is baked into onPageEnter above
+
+// Background health check on load if URL already set
+window.addEventListener('load',()=>{
+  if(getRailwayUrl()) fetchLiveData(true);
+});
+</script>
+</body>
+</html>

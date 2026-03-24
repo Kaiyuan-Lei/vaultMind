@@ -1,0 +1,230 @@
+/* css/app.css */
+/* Google Fonts 改為 index.html <link> 載入，此處刪除 @import（Warn 7 fix）*/
+
+/* ── 設計 token（Bug 1 fix: 合並為單一 :root）── */
+:root {
+  --bg:         #0a0c0f;
+  --surface:    #11151c;
+  --surface2:   #1c2228;
+  --text:       #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-hint:  #4a5568;
+  --accent:     #00d4a0;      /* Bug 2 fix: 補上 --accent */
+  --green:      #00d4a0;
+  --red:        #ff4d4f;
+  --amber:      #f4a623;
+  --border:     #1e293b;
+  --border2:    rgba(255,255,255,0.08);
+  --font-mono:  "DM Mono", monospace;  /* Bug 1 fix: 移入單一 :root */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── 整體佈局 ── */
+.app {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 56px 1fr;
+  min-height: 100vh;
+}
+
+.topbar {
+  grid-column: 1 / -1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.main {
+  padding: 24px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* ── 導航項目（Bug 5 fix: 採用 index.html 的 .nav-item 命名） ── */
+.nav-section {
+  padding: 4px 16px 8px;
+  font-size: 10px;
+  color: var(--text-hint);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  border-left: 2px solid transparent;
+  transition: all .15s;
+  user-select: none;
+}
+
+.nav-item:hover { color: var(--text); background: rgba(0,212,160,.08); }
+.nav-item.active { color: var(--accent); background: rgba(0,212,160,.08); border-left-color: var(--accent); }
+.nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── 頁面切換 ── */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── 指標卡（Bug 5 fix: text-align 改為 left，Warn 11 fix）── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  text-align: left;  /* Warn 11 fix */
+}
+
+.metric-card .label {
+  font-size: 10px;
+  color: var(--text-hint);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+}
+
+.metric-card .value {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text);     /* Bug 2 fix: 改為 --text，顏色由 JS 動態加 .green/.red/.amber */
+  line-height: 1;
+}
+
+.metric-card .value.green { color: var(--accent); }
+.metric-card .value.red   { color: var(--red); }
+.metric-card .value.amber { color: var(--amber); }
+
+.metric-card .change {
+  font-size: 11px;
+  color: var(--text-hint);
+  margin-top: 6px;
+}
+
+/* ── 按鈕（Warn 8 fix: 縮小選擇器，不影響 .btn）── */
+button:not(.btn):not(.btn-primary) {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+
+button:not(.btn):not(.btn-primary):hover {
+  background: #00b88a;
+}
+
+/* ── 圖表容器（Warn 6 fix: 改用 .chart-wrap 命名與 index.html 對齊）── */
+.chart-wrap    { position: relative; height: 200px; }
+.chart-wrap-lg { position: relative; height: 240px; }
+.chart-wrap-sm { position: relative; height: 160px; }
+
+/* ── 熱力圖（Bug 3 fix: 刪除列數，由 JS 動態設置；Bug 4 fix: 刪除 --opacity）── */
+.heatmap {
+  /* grid-template-columns: 由 JS 設置 */
+  display: grid;
+  gap: 2px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+}
+
+.heatmap-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  padding: 6px 2px;
+  font-weight: 500;
+  /* Bug 4 fix: 刪除 .positive/.negative，背景色由 JS inline style 設置 */
+}
+
+/* ── 配置條（Bug 5 fix: 採用 .alloc-* 命名，與 index.html 對齊）── */
+.alloc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.alloc-row:last-child { border-bottom: none; }
+.alloc-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.alloc-name { font-size: 12px; color: var(--text); width: 100px; }
+.alloc-bar-wrap { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+.alloc-bar  { height: 100%; border-radius: 2px; transition: width .5s; }
+.alloc-pct  { font-size: 12px; color: var(--text-muted); width: 38px; text-align: right; }
+.alloc-val  { font-size: 12px; color: var(--text); width: 76px; text-align: right; }
+
+/* ── AI 面板 ── */
+.ai-panel {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+
+/* Warn 9 fix: 刪除 .ai-typing::after，游標完全由 JS <span class="cursor"> 管理 */
+.ai-typing { min-height: 100px; }
+
+/* ── 游標動畫（由 JS <span class="cursor"> 使用）── */
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.cursor {
+  display: inline-block;
+  width: 1px; height: 12px;
+  background: var(--accent);
+  animation: blink 1s infinite;
+  margin-left: 1px;
+  vertical-align: middle;
+}
+
+/* ── 響應式（Warn 10 fix）── */
+@media (max-width: 768px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 56px auto 1fr;
+  }
+  .sidebar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-item { border-left: none; border-bottom: 2px solid transparent; padding: 6px 12px; }
+  .nav-item.active { border-left: none; border-bottom-color: var(--accent); }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .heatmap { max-width: 100%; }
+}

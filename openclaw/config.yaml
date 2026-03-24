@@ -1,0 +1,73 @@
+# ============================================================
+# openclaw/config.yaml
+# OpenClaw 主配置文件
+# ============================================================
+
+# ── 專案識別 ──────────────────────────────────────────────
+project:
+  name: vaultmind
+  description: "VaultMind · Web3 Portfolio Intelligence"
+  version: "1.0.0"
+
+# ── 環境變量來源 ───────────────────────────────────────────
+# OpenClaw 按以下優先級載入（後者覆蓋前者）：
+#   1. 系統環境變量
+#   2. 此 env_file 指定的 .env 文件
+env_file: ../.env
+
+# ── Flow 文件目錄 ──────────────────────────────────────────
+flows_dir: ./flows
+
+# ── 數據輸出目錄 ───────────────────────────────────────────
+# 所有 flow 的 save: 路徑都相對於此目錄
+data_dir: ../data
+
+# ── 日誌 ──────────────────────────────────────────────────
+logging:
+  level: info # debug | info | warn | error
+  file: ./logs/openclaw.log
+  max_size_mb: 10
+  keep_days: 7
+
+# ── HTTP 全局設定 ──────────────────────────────────────────
+http:
+  timeout_seconds: 15 # 單次請求超時
+  retry:
+    max_attempts: 3
+    backoff_seconds: 2 # 指數退避基數（2, 4, 8 秒）
+  rate_limit:
+    requests_per_minute: 20 # 全局限速，防止觸發各 API 的 429
+
+# ── Claude API 全局設定 ────────────────────────────────────
+claude:
+  api_key: "${ANTHROPIC_API_KEY}"
+  default_model: claude-sonnet-4-20250514
+  default_max_tokens: 1000
+  # 若單個 flow 的 claude step 未指定 api_key，使用此處的設定
+  timeout_seconds: 30
+
+# ── 各 Flow 的執行設定 ─────────────────────────────────────
+flows:
+  portfolio-data:
+    enabled: true
+    schedule: "*/5 * * * *"
+    on_error: log_and_continue # 失敗時記錄日誌，不中斷其他 flow
+
+  onchain-alerts:
+    enabled: true
+    schedule: "*/2 * * * *"
+    on_error: log_and_continue
+
+  sentiment-scan:
+    enabled: true
+    schedule: "*/15 * * * *"
+    on_error: log_and_continue
+
+# ── 通知設定（可選，Demo 階段可留空）──────────────────────
+notifications:
+  enabled: false
+  # 日後可在此加入 Telegram / Slack webhook
+  # telegram:
+  #   bot_token: "${TELEGRAM_BOT_TOKEN}"
+  #   chat_id:   "${TELEGRAM_CHAT_ID}"
+  #   on_events: [flow_error, high_risk_alert]

@@ -1,0 +1,169 @@
+name: portfolio-data
+description: "每 5 分鐘更新幣價、DeFi TVL、資產估值，分別寫入 portfolio.json 與 sentiment.json"
+schedule: "*/5 * * * *"
+
+env:
+  COINGECKO_API_KEY: "${COINGECKO_API_KEY}"
+
+steps:
+  # ── Step 1: 抓取幣價（ETH/BTC/ARB/WBTC）─────────────────────
+  # Bug 3 fix: 補充 wbtc，穩定幣直接設 1.0 無需查詢
+  - name: fetch-prices
+    type: http
+    url: https://api.coingecko.com/api/v3/simple/price
+    params:
+      ids: "ethereum,bitcoin,arbitrum,wrapped-bitcoin"
+      vs_currencies: usd
+      include_24hr_change: "true"
+      include_24hr_vol: "true"
+    on_error: continue
+    output: prices
+
+  # ── Step 2: 抓取 DeFi TVL（全量，後面截取）──────────────────
+  # Bug 1 fix: 移除不支援的 transform 頂層字段，截取邏輯移入 merge
+  - name: fetch-tvl
+    type: http
+    url: https://api.llama.fi/protocols
+    on_error: continue
+    output: tvl_data_raw
+
+  # ── Step 3: 抓取 Fear & Greed（只取 31 天用於歷史圖表）───────
+  # Warn 6 fix: limit 改為 31，明確與 sentiment.json 的 history_30d 欄位對齊
+  - name: fetch-fear-greed
+    type: http
+    url: https://api.alternative.me/fng/
+    params:
+      limit: "31"
+    on_error: continue
+    output: fg_raw
+
+  # ── Step 4: 更新 portfolio.json（Bug 4 fix：寫入前端實際讀取的文件）──
+  - name: update-portfolio
+    type: transform
+    input: [prices]
+    script: |
+      // 讀取現有 portfolio.json 保留不變的欄位（strategies、hedges、metrics 等）
+      const existing = JSON.parse(
+        require('fs').readFileSync('./data/portfolio.json', 'utf8')
+      );
+
+      // 輔助：安全取幣價
+      const px = (id) => prices?.[id]?.usd ?? null;
+      const ch = (id) => prices?.[id]?.usd_24h_change ?? null;
+
+      // 更新每個資產的 price_usd 和 change_24h_pct
+      const updatedAssets = existing.assets.map(asset => {
+        const cgId = {
+          'ETH':       'ethereum',
+          'BTC':       'bitcoin',
+          'ARB':       'arbitrum',
+          'WBTC':      'wrapped-bitcoin',
+          'USDC LP':   null,   // 穩定幣直接設 1.0
+          'Stable LP': null,
+          'RWA Bond':  null,   // 鏈外資產，保持現有價格
+        }[asset.name];
+
+        const newPrice = cgId ? (px(cgId) ?? asset.price_usd) : asset.price_usd;
+        const newValue = Math.round(asset.qty * newPrice);
+        const newChange = cgId ? (ch(cgId) ?? asset.change_24h_pct) : asset.change_24h_pct;
+
+        return {
+          ...asset,
+          price_usd:      newPrice,
+          value_usd:      newValue,
+          change_24h_pct: newChange !== null ? parseFloat(newChange.toFixed(2)) : asset.change_24h_pct,
+        };
+      });
+
+      // 重新計算 gross_long 和 net AUM
+      const grossLong = updatedAssets.reduce((s, a) => s + a.value_usd, 0);
+      const hedgeTotal = existing.hedges.reduce((s, h) => s + h.value_usd, 0);
+      const netAUM = grossLong + hedgeTotal;
+
+      // 更新百分比（基於 grossLong）
+      const assetsWithPct = updatedAssets.map(a => ({
+        ...a,
+        percentage: parseFloat((a.value_usd / grossLong * 100).toFixed(1)),
+      }));
+
+      return {
+        ...existing,
+        timestamp:       new Date().toISOString(),
+        total_value_usd: netAUM,
+        gross_long_usd:  grossLong,
+        assets:          assetsWithPct,
+      };
+    save: ./data/portfolio.json
+
+  # ── Step 5: 更新 sentiment.json（Bug 4 fix：寫入正確路徑）────
+  # Warn 6 fix：30 天歷史寫入 sentiment.json 的 history_30d
+  - name: update-sentiment
+    type: transform
+    # Bug 2 fix: 加入防禦性空值檢查
+    input: [fg_raw, prices]
+    script: |
+      const fgData = fg_raw?.data ?? [];
+      const today  = fgData[0] ?? {};
+
+      // 讀取現有 sentiment.json 保留衍生品和鏈上指標
+      const existing = JSON.parse(
+        require('fs').readFileSync('./data/sentiment.json', 'utf8')
+      );
+
+      // 更新衍生品中可從公開 API 取得的欄位
+      const ethBtcRatio = (prices?.ethereum?.usd && prices?.bitcoin?.usd)
+        ? parseFloat((prices.ethereum.usd / prices.bitcoin.usd).toFixed(4))
+        : existing.derivatives.eth_btc_ratio;
+
+      return {
+        ...existing,
+        timestamp: new Date().toISOString(),
+        fear_greed: {
+          value:          parseInt(today.value ?? existing.fear_greed.value),
+          label:          today.value_classification ?? existing.fear_greed.label,
+          label_zh:       {
+            'Extreme Fear': '極度恐懼',
+            'Fear':         '恐懼',
+            'Neutral':      '中性',
+            'Greed':        '貪婪',
+            'Extreme Greed':'極度貪婪',
+          }[today.value_classification] ?? existing.fear_greed.label_zh,
+          previous_value: fgData[1] ? parseInt(fgData[1].value) : existing.fear_greed.previous_value,
+        },
+        derivatives: {
+          ...existing.derivatives,
+          eth_btc_ratio: ethBtcRatio,
+        },
+        // Warn 6 fix: 31 天歷史完整寫入（最新在前，前端取 [0] 為今日）
+        history_30d: fgData.slice(0, 31).map(d => ({
+          date:  new Date(parseInt(d.timestamp) * 1000).toISOString().slice(0,10),
+          value: parseInt(d.value),
+        })).reverse(),   // 反轉為舊→新排列，與圖表時間軸一致
+      };
+    save: ./data/sentiment.json
+
+  # ── Step 6: 更新 signals.json 的 protocols（TVL 部分）────────
+  # Bug 1 fix: 截取邏輯在 script 中完成，不用 transform 頂層字段
+  - name: update-tvl
+    type: transform
+    input: [tvl_data_raw]
+    script: |
+      // 只保留前 10 個協議，並格式化為 signals.json 的結構
+      const top10 = (tvl_data_raw ?? [])
+        .filter(p => p.tvl > 0)
+        .sort((a, b) => b.tvl - a.tvl)
+        .slice(0, 10)
+        .map(p => ({
+          name:               p.name,
+          tvl_usd:            Math.round(p.tvl),
+          tvl_change_24h_pct: p.change_1d != null ? parseFloat(p.change_1d.toFixed(2)) : null,
+          color:              null,   // 顏色由前端依名稱決定
+        }));
+
+      // 讀取現有 signals.json，只更新 protocols 欄位
+      const existing = JSON.parse(
+        require('fs').readFileSync('./data/signals.json', 'utf8')
+      );
+
+      return { ...existing, protocols: top10 };
+    save: ./data/signals.json

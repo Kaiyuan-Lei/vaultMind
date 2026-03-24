@@ -1,0 +1,103 @@
+{
+  "timestamp": "2026-03-17T12:00:00Z",
+  "summary": {
+    "protocols_monitored": 28,
+    "chains": ["ETH", "ARB", "OP"],
+    "large_tx_alerts_24h": 7,
+    "anomalous_tx_count": 3,
+    "data_lag_seconds": 2.3
+  },
+  "alerts": [
+    {
+      "id": "alert-001",
+      "time": "14:32",
+      "asset": "USDT",
+      "amount_usd": 2100000,
+      "direction": "CEX→DeFi",
+      "risk": "medium",
+      "detail": "疑似大戶移倉至 AAVE v3",
+      "tx_hash": "0xabc...001"
+    },
+    {
+      "id": "alert-002",
+      "time": "13:55",
+      "asset": "ETH",
+      "amount_usd": 890000,
+      "direction": "Whale補倉",
+      "risk": "high",
+      "detail": "0x4a...f2 向 AAVE 補充抵押品",
+      "tx_hash": "0xabc...002"
+    },
+    {
+      "id": "alert-003",
+      "time": "12:40",
+      "asset": "WBTC",
+      "amount_usd": 1400000,
+      "direction": "跨鏈橋",
+      "risk": "medium",
+      "detail": "ETH → Arbitrum 跨鏈遷移",
+      "tx_hash": "0xabc...003"
+    },
+    {
+      "id": "alert-004",
+      "time": "11:18",
+      "asset": "USDC",
+      "amount_usd": 560000,
+      "direction": "RWA鑄造",
+      "risk": "low",
+      "detail": "Matrixdock HKD Bond 鑄造",
+      "tx_hash": "0xabc...004"
+    },
+    {
+      "id": "alert-005",
+      "time": "10:05",
+      "asset": "ETH",
+      "amount_usd": 2800000,
+      "direction": "Whale出售",
+      "risk": "high",
+      "detail": "CEX 充值，疑似拋售信號",
+      "tx_hash": "0xabc...005"
+    }
+  ],
+  "protocols": [
+    {
+      "name": "Aave v3",
+      "tvl_usd": 6400000000,
+      "tvl_change_24h_pct": 2.1,
+      "color": "#9b7eff"
+    },
+    {
+      "name": "Uniswap v4",
+      "tvl_usd": 5800000000,
+      "tvl_change_24h_pct": 4.3,
+      "color": "#ff5c6a"
+    },
+    {
+      "name": "Maker RWA",
+      "tvl_usd": 3700000000,
+      "tvl_change_24h_pct": 0.8,
+      "color": "#4da6ff"
+    },
+    {
+      "name": "Curve",
+      "tvl_usd": 4200000000,
+      "tvl_change_24h_pct": -1.2,
+      "color": "#f4a623"
+    },
+    {
+      "name": "Matrixdock",
+      "tvl_usd": 2100000000,
+      "tvl_change_24h_pct": 18.4,
+      "color": "#00d4a0"
+    }
+  ],
+  "stable_flow_7d": [
+    { "date": "2026-03-10", "usdc_mint_m": 120, "usdt_redeem_m": -80,  "hkd_stable_mint_m": 20  },
+    { "date": "2026-03-11", "usdc_mint_m": 85,  "usdt_redeem_m": -60,  "hkd_stable_mint_m": 35  },
+    { "date": "2026-03-12", "usdc_mint_m": 210, "usdt_redeem_m": -120, "hkd_stable_mint_m": 45  },
+    { "date": "2026-03-13", "usdc_mint_m": 95,  "usdt_redeem_m": -70,  "hkd_stable_mint_m": 60  },
+    { "date": "2026-03-14", "usdc_mint_m": 180, "usdt_redeem_m": -100, "hkd_stable_mint_m": 80  },
+    { "date": "2026-03-15", "usdc_mint_m": 240, "usdt_redeem_m": -90,  "hkd_stable_mint_m": 110 },
+    { "date": "2026-03-16", "usdc_mint_m": 310, "usdt_redeem_m": -140, "hkd_stable_mint_m": 140 }
+  ]
+}
