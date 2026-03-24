@@ -233,7 +233,6 @@ details.card>div{border-top:1px solid var(--border)}
   .m-grid{grid-template-columns:1fr 1fr}
   .grid2,.grid3,.grid13,.strat-grid{grid-template-columns:1fr}
   header{flex-wrap:wrap;height:auto;padding:10px 14px}
-  .bar-key input{width:160px}
 }
 </style>
 </head>
@@ -256,20 +255,10 @@ details.card>div{border-top:1px solid var(--border)}
     </svg>
     <span style="letter-spacing:-.3px">Vault<span style="font-weight:400;opacity:.75">Mind</span></span>
   </div>
-  <div class="bar-sep"></div>
-  <div class="bar-key">
-    <label for="apiKeyInput">Anthropic API Key</label>
-    <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off"/>
-  </div>
-  <div class="bar-sep"></div>
-  <div class="bar-key">
-    <label for="railwayUrlInput" style="white-space:nowrap">Railway URL</label>
-    <input type="text" id="railwayUrlInput" placeholder="https://vaultmind-xxx.railway.app" autocomplete="off" style="width:196px"/>
-  </div>
   <div class="bar-right">
-    <div id="api-dot" class="status-dot" style="background:var(--hint)" title="未連接 Railway"></div>
-    <span id="api-status" class="bar-time" style="font-size:10px;color:var(--hint)">離線</span>
-    <div style="width:1px;height:14px;background:var(--border);margin:0 2px"></div>
+    <div id="api-dot" class="status-dot" style="background:var(--hint)" title="數據連接狀態"></div>
+    <span id="api-status" class="bar-time" style="font-size:10px;color:var(--hint)">連接中…</span>
+    <div style="width:1px;height:14px;background:var(--border);margin:0 4px"></div>
     <div class="status-dot"></div>
     <span id="clock" class="bar-time"></span>
   </div>
@@ -753,13 +742,7 @@ function initNav(){
 function onPageEnter(pg){
   if(pg==='overview'){
     renderOverview();
-    // 若績效指標為空，自動觸發 AI 診斷（延遲 600ms 等 DOM 渲染完成）
-    const p=portfolio;
-    const missingMetrics=p.sharpe==null&&p.mdd==null&&p.annual==null;
-    const hasAssets=p.assets.length>0||p.aum>0;
-    if(hasAssets&&missingMetrics){
-      setTimeout(()=>{ readPortfolio(); callAI('overview','overview-main'); }, 600);
-    }
+    // AI 診斷只在用戶主動點擊「儲存並分析」或「AI 健康診斷」時觸發
   }
   if(pg==='portfolio') renderPortfolio();
   if(pg==='risk') renderRisk();
@@ -1123,7 +1106,7 @@ const PROMPT_MAP={
 
 // ── Streaming helper (shared by panel AI and chat AI) ──
 async function streamAI({page, msgEl, userPrompt, onDone, onErr}){
-  const apiKey=document.getElementById('apiKeyInput')?.value.trim();
+  const apiKey=CONFIG.ANTHROPIC_KEY||'';
   if(activeControllers[page]){activeControllers[page].abort();delete activeControllers[page]}
 
   readPortfolio();
@@ -1612,13 +1595,23 @@ function setQuestion(q){const t=document.getElementById('chat-textarea');if(t){t
 // ────────────────────────────────────────────────────────────
 document.getElementById('btn-save-portfolio')?.addEventListener('click',()=>{
   readPortfolio();
-  if(!portfolio.assets.length&&!portfolio.aum){
+
+  if(!portfolio.assets.length && !portfolio.aum){
     showToast('請先填入至少一項持倉數據',true); return;
   }
-  showToast('持倉已儲存！正在導航至組合總覽…');
-  setTimeout(()=>{
-    document.querySelector('.nav-it[data-page="overview"]')?.click();
-  },800);
+
+  // 自動抓取幣價（如果 Railway 已連接）
+  const base = getRailwayUrl();
+  if(base){
+    fetchPricesForAssets().then(()=>{
+      readPortfolio(); // 抓完價格再讀一次
+      showToast('持倉已儲存 ✓ 前往總覽頁點擊「AI 健康診斷」開始分析');
+      setTimeout(()=>document.querySelector('.nav-it[data-page="overview"]')?.click(), 600);
+    });
+  } else {
+    showToast('持倉已儲存 ✓ 前往總覽頁點擊「AI 健康診斷」開始分析');
+    setTimeout(()=>document.querySelector('.nav-it[data-page="overview"]')?.click(), 400);
+  }
 });
 
 // currency unit sync
@@ -1708,9 +1701,17 @@ function showToast(msg,err=false){
 let liveData = { portfolio:null, signals:null, sentiment:null };
 let liveRefreshTimer = null;
 
+// ── 配置（部署時填入，無需用戶手動輸入）──────────────────────
+// ════════════════════════════════════════════════════════════
+// 部署配置 — 填入你的真實值，用戶無需手動輸入
+// ════════════════════════════════════════════════════════════
+const CONFIG = {
+  RAILWAY_URL:   '',   // e.g. 'https://vaultmind-xxx.railway.app'
+  ANTHROPIC_KEY: '',   // e.g. 'sk-ant-api03-...'
+};
+
 function getRailwayUrl(){
-  const v=(document.getElementById('railwayUrlInput')?.value||'').trim().replace(/\/+$/,'');
-  return v||null;
+  return CONFIG.RAILWAY_URL.includes('YOUR') ? null : CONFIG.RAILWAY_URL.replace(/\/+$/,'');
 }
 
 function setApiStatus(ok, label){
@@ -1874,10 +1875,7 @@ function stopLiveRefresh(){
 document.getElementById('btn-live-refresh')?.addEventListener('click',()=>fetchLiveData());
 
 // Railway URL change → immediate refresh
-document.getElementById('railwayUrlInput')?.addEventListener('change',()=>{
-  if(document.getElementById('page-live')?.classList.contains('active')) fetchLiveData();
-  else fetchLiveData(true); // background check
-});
+// Railway URL is now hardcoded in CONFIG
 
 // ── Telegram push via /api/chat ──
 // When Railway URL is set: route AI call through server (which pushes to TG after stream)
@@ -1891,7 +1889,7 @@ async function callAIWithOptionalTg(page, promptKey, customPrompt){
     return callAI(page, promptKey, customPrompt);
   }
   // Route through Railway /api/chat — server streams back AND pushes to Telegram
-  const apiKey=document.getElementById('apiKeyInput')?.value.trim();
+  const apiKey=CONFIG.ANTHROPIC_KEY||'';
   if(!apiKey){showToast('請先填入 Anthropic API Key',true);return;}
 
   if(activeControllers[page]){activeControllers[page].abort();delete activeControllers[page]}
@@ -2040,7 +2038,19 @@ document.getElementById('p-risk-pref')?.addEventListener('change',()=>{
 
 // Background health check on load if URL already set
 window.addEventListener('load',()=>{
-  if(getRailwayUrl()) fetchLiveData(true);
+  const base = getRailwayUrl();
+  if(base){
+    fetchLiveData(true);
+    // 如果 Railway 有配置，頁面載入時自動檢查連接
+    fetch(base+'/health',{signal:AbortSignal.timeout(5000)})
+      .then(r=>r.json())
+      .then(d=>{
+        setApiStatus(true, d.scheduler==='running'?'即時數據':'已連接');
+      })
+      .catch(()=>setApiStatus(false,'連接失敗'));
+  } else {
+    setApiStatus(false,'未配置 Railway URL');
+  }
 });
 </script>
 </body>
