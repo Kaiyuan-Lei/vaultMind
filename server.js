@@ -15,6 +15,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+const CONFIG = {
+  RAILWAY_URL:   'https://vaultmind-production-606a.up.railway.app',  // ← 填你的真實 URL
+  ANTHROPIC_KEY: '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',                   // ← 填你的新 API Key
+};
 const DATA_DIR       = path.join(__dirname, 'data');
 const TG_TOKEN       = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT_ID     = process.env.TELEGRAM_CHAT_ID;
